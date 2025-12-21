@@ -147,43 +147,64 @@ async def simple_ping() -> Dict[str, Any]:
 # =============================================================================
 
 @router.get("/postgres/status")
-async def postgres_status(db: Session = Depends(get_db)) -> Dict[str, Any]:
+async def postgres_status() -> Dict[str, Any]:
     """
     Check PostgreSQL connection status.
     
     Quick check to see if PostgreSQL is accessible.
+    Runs in thread pool to avoid blocking async event loop.
     """
+    import asyncio
+    from app.db.session import get_session_local
+    
+    def _check_postgres():
+        """Sync function to check postgres - runs in executor."""
+        db = None
+        try:
+            db = get_session_local()
+            # Simple query to check connection
+            result = db.execute(text("SELECT 1 as test"))
+            row = result.fetchone()
+            
+            # Check database version
+            version_result = db.execute(text("SELECT version()"))
+            version = version_result.scalar()
+            
+            return {
+                "status": "connected",
+                "postgres_connected": True,
+                "test_query": row[0] if row else None,
+                "database_version": version[:50] if version else None
+            }
+        except Exception as e:
+            return {
+                "status": "error",
+                "postgres_connected": False,
+                "error": str(e),
+                "error_type": type(e).__name__
+            }
+        finally:
+            if db:
+                db.close()
+    
     try:
-        # Simple query to check connection
-        result = db.execute(text("SELECT 1 as test"))
-        row = result.fetchone()
-        
-        # Check database version
-        version_result = db.execute(text("SELECT version()"))
-        version = version_result.scalar()
-        
+        loop = asyncio.get_event_loop()
+        result = await asyncio.wait_for(
+            loop.run_in_executor(None, _check_postgres),
+            timeout=10.0
+        )
+        return result
+    except asyncio.TimeoutError:
         return {
-            "status": "connected",
-            "postgres_connected": True,
-            "test_query": row[0] if row else None,
-            "database_version": version[:50] if version else None  # Truncate long version string
-        }
-        
-    except Exception as e:
-        logger.exception(f"PostgreSQL status check failed: {str(e)}")
-        return {
-            "status": "error",
+            "status": "timeout",
             "postgres_connected": False,
-            "error": str(e),
-            "error_type": type(e).__name__
+            "error": "Connection timed out after 10 seconds",
+            "message": "Cloud SQL instance may not be connected. Check --add-cloudsql-instances flag."
         }
 
 
 @router.post("/postgres")
-async def test_postgres_connection(
-    data: TestMessage,
-    db: Session = Depends(get_db)
-) -> Dict[str, Any]:
+async def test_postgres_connection(data: TestMessage) -> Dict[str, Any]:
     """
     Test PostgreSQL connection by creating and querying a temp table.
     
@@ -193,52 +214,79 @@ async def test_postgres_connection(
     3. Can write (INSERT)
     4. Can read (SELECT)
     5. Can clean up (DROP TABLE)
+    
+    Runs in thread pool to avoid blocking async event loop.
     """
-    try:
-        test_table = f"test_table_{int(datetime.utcnow().timestamp())}"
-        
-        # Create temporary table
-        db.execute(text(f"""
-            CREATE TEMP TABLE {test_table} (
-                id SERIAL PRIMARY KEY,
-                message TEXT,
-                created_at TIMESTAMP DEFAULT NOW()
+    import asyncio
+    from app.db.session import get_session_local
+    
+    def _test_postgres():
+        """Sync function to test postgres - runs in executor."""
+        db = None
+        try:
+            db = get_session_local()
+            test_table = f"test_table_{int(datetime.utcnow().timestamp())}"
+            
+            # Create temporary table
+            db.execute(text(f"""
+                CREATE TEMP TABLE {test_table} (
+                    id SERIAL PRIMARY KEY,
+                    message TEXT,
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+            """))
+            
+            # Insert test data
+            db.execute(
+                text(f"INSERT INTO {test_table} (message) VALUES (:message)"),
+                {"message": data.message}
             )
-        """))
-        
-        # Insert test data
-        db.execute(
-            text(f"INSERT INTO {test_table} (message) VALUES (:message)"),
-            {"message": data.message}
-        )
-        
-        # Read it back
-        result = db.execute(text(f"SELECT message FROM {test_table}"))
-        retrieved_message = result.scalar()
-        
-        # Commit the transaction
-        db.commit()
-        
-        return {
-            "status": "success",
-            "postgres_connected": True,
-            "message": "PostgreSQL is working correctly",
-            "test_data": {
-                "sent": data.message,
-                "retrieved": retrieved_message
+            
+            # Read it back
+            result = db.execute(text(f"SELECT message FROM {test_table}"))
+            retrieved_message = result.scalar()
+            
+            # Commit the transaction
+            db.commit()
+            
+            return {
+                "status": "success",
+                "postgres_connected": True,
+                "message": "PostgreSQL is working correctly",
+                "test_data": {
+                    "sent": data.message,
+                    "retrieved": retrieved_message
+                }
             }
-        }
-        
-    except Exception as e:
-        logger.exception(f"PostgreSQL test failed: {str(e)}")
-        db.rollback()
-        raise HTTPException(
-            status_code=500,
-            detail={
+        except Exception as e:
+            if db:
+                db.rollback()
+            return {
                 "status": "error",
                 "postgres_connected": False,
                 "error": str(e),
                 "error_type": type(e).__name__
+            }
+        finally:
+            if db:
+                db.close()
+    
+    try:
+        loop = asyncio.get_event_loop()
+        result = await asyncio.wait_for(
+            loop.run_in_executor(None, _test_postgres),
+            timeout=15.0
+        )
+        if result.get("status") == "error":
+            raise HTTPException(status_code=500, detail=result)
+        return result
+    except asyncio.TimeoutError:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "status": "timeout",
+                "postgres_connected": False,
+                "error": "Connection timed out after 15 seconds"
             }
         )
 
