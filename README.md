@@ -1,4 +1,3 @@
-
 # DocLearn - AI-Powered Personalized Learning Platform
 
 A production-ready AI microservice that provides personalized curriculum generation and interactive tutoring using Google Gemini models.
@@ -15,15 +14,14 @@ A production-ready AI microservice that provides personalized curriculum generat
 
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   FastAPI App   │────▶│   PostgreSQL    │────▶│  Session Data   │
+│   FastAPI App   │────▶│    MongoDB      │────▶│  Sessions       │
 │                 │     │                 │     │  Lesson Plans   │
-│  - Sessions     │     └─────────────────┘     │  Progress       │
-│  - Chat         │                             └─────────────────┘
-│  - Health       │     ┌─────────────────┐     ┌─────────────────┐
-│                 │────▶│    MongoDB      │────▶│  Chat History   │
-└─────────────────┘     │                 │     │  Summaries      │
-        │               └─────────────────┘     │  Buffer         │
-        ▼                                       └─────────────────┘
+│  - Sessions     │     │  (All Storage)  │     │  Chat History   │
+│  - Chat         │     │                 │     │  Summaries      │
+│  - Health       │     └─────────────────┘     └─────────────────┘
+└─────────────────┘
+        │
+        ▼
 ┌─────────────────┐
 │  Google Gemini  │
 │  - 2.5 Pro      │ ◀── Planning (curriculum generation)
@@ -36,18 +34,15 @@ A production-ready AI microservice that provides personalized curriculum generat
 ```
 app/
 ├── core/
-│   ├── config.py          # Settings (Gemini, DBs, buffer size)
+│   ├── config.py          # Settings (Gemini, MongoDB, buffer size)
 │   ├── llm_factory.py     # Gemini LLM initialization
 │   └── prompts.py         # System prompts for tutor/planner
-├── db/
-│   ├── models.py          # SQLAlchemy models (PostgreSQL)
-│   └── session.py         # Database session management
 ├── services/
-│   ├── session_service.py # Session CRUD (PostgreSQL)
+│   ├── session_service.py # Session CRUD (MongoDB)
 │   ├── chat_service.py    # Chat orchestration
 │   ├── plan_service.py    # Plan generation
 │   ├── memory.py          # Buffer summarization
-│   └── mongodb.py         # Chat storage (MongoDB)
+│   └── mongodb.py         # MongoDB connection & chat storage
 ├── graphs/
 │   ├── generation_graph.py # LangGraph state machine
 │   ├── nodes.py           # Plan & tutor nodes
@@ -56,7 +51,8 @@ app/
 │   └── routes/
 │       ├── sessions.py    # Session endpoints
 │       ├── chat.py        # Chat endpoints (SSE streaming)
-│       └── health.py      # Health checks
+│       ├── health.py      # Health checks
+│       └── test.py        # Diagnostic test endpoints
 └── main.py                # FastAPI application factory
 ```
 
@@ -72,20 +68,15 @@ app/
 2. **Set up environment variables:**
    ```bash
    cp .env.example .env
-   # Edit .env with your Google API key and database URLs
+   # Edit .env with your Google API key and MongoDB URL
    ```
 
-3. **Start databases with Docker:**
+3. **Start MongoDB with Docker:**
    ```bash
-   docker-compose up -d postgres mongodb
+   docker-compose up -d mongodb
    ```
 
-4. **Run database migrations:**
-   ```bash
-   alembic upgrade head
-   ```
-
-5. **Run the application:**
+4. **Run the application:**
    ```bash
    uvicorn app.main:app --reload
    ```
@@ -105,57 +96,15 @@ docker-compose --profile dev up -d
 docker-compose logs -f app
 ```
 
-## Database Migrations (Alembic)
-
-This project uses Alembic for database schema migrations.
-
-### Common Commands
-
-```bash
-# Apply all pending migrations
-alembic upgrade head
-
-# Rollback last migration
-alembic downgrade -1
-
-# Rollback all migrations
-alembic downgrade base
-
-# Show current revision
-alembic current
-
-# Show migration history
-alembic history
-
-# Create a new migration (auto-detect changes)
-alembic revision --autogenerate -m "Add new column"
-
-# Create an empty migration (manual)
-alembic revision -m "Custom migration"
-```
-
-### Creating New Migrations
-
-When you modify models in `app/db/models.py`:
-
-1. **Auto-generate migration:**
-   ```bash
-   alembic revision --autogenerate -m "Description of changes"
-   ```
-
-2. **Review the generated file** in `alembic/versions/`
-
-3. **Apply the migration:**
-   ```bash
-   alembic upgrade head
-   ```
-
 ## API Endpoints
 
 ### Sessions
 - `POST /api/v1/sessions` - Create a new learning session
+- `GET /api/v1/sessions` - List user sessions
 - `GET /api/v1/sessions/{id}` - Get session details
 - `GET /api/v1/sessions/{id}/plan` - Get lesson plan
+- `PATCH /api/v1/sessions/{id}/progress` - Update progress
+- `DELETE /api/v1/sessions/{id}` - Delete session
 
 ### Chat
 - `POST /api/v1/chat` - Send message (auto-detects streaming need)
@@ -165,7 +114,14 @@ When you modify models in `app/db/models.py`:
 
 ### Health
 - `GET /health` - Basic health check
-- `GET /health/ready` - Readiness probe
+- `GET /health/ready` - Readiness probe (MongoDB + Gemini)
+
+### Test Endpoints
+- `GET /test/ping` - Simple ping (no dependencies)
+- `GET /test/mongodb/status` - MongoDB connection check
+- `POST /test/mongodb` - MongoDB write/read test
+- `GET /test/gemini/status` - Gemini API configuration check
+- `POST /test/gemini` - Gemini API call test
 
 ## Memory Buffer System
 
@@ -188,7 +144,6 @@ Buffer: [msg11, msg12, ..., msg20] → Summarize → [Summary 1, Summary 2]
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `GOOGLE_API_KEY` | - | Google AI API key (required) |
-| `DATABASE_URL` | - | PostgreSQL connection URL |
 | `MONGODB_URL` | `mongodb://localhost:27017` | MongoDB connection URL |
 | `MONGODB_DB_NAME` | `doclearn` | MongoDB database name |
 | `PLANNING_MODEL` | `gemini-2.5-pro` | Model for curriculum generation |
@@ -206,11 +161,28 @@ Buffer: [msg11, msg12, ..., msg20] → Summarize → [Summary 1, Summary 2]
    - Secret Manager API
 
 2. **Create secrets in Secret Manager:**
-   - `doclearn-db-url`: PostgreSQL connection string
-   - `doclearn-mongo-url`: MongoDB connection string
-   - `doclearn-google-api-key`: Google API key
+   - `doclearn-mongo-url`: MongoDB connection string (e.g., MongoDB Atlas)
+   - `doclearn-gemini-key`: Google API key
 
 3. **Deploy:**
    ```bash
    gcloud builds submit --config cloudbuild.yaml .
    ```
+
+The `cloudbuild.yaml` is configured to:
+- Build Docker image
+- Push to Container Registry
+- Deploy to Cloud Run with secrets mounted as environment variables
+
+## MongoDB Collections
+
+The application uses the following MongoDB collections:
+
+- **learning_sessions**: Session documents with lesson plans and progress
+- **chat_messages**: Chat message buffer with timestamps
+- **chat_summaries**: Summarized conversation history
+- **test_collection**: Temporary collection for diagnostic tests
+
+## License
+
+MIT

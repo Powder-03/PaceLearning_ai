@@ -10,40 +10,18 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/doclearn
       - MONGODB_URL=mongodb://mongodb:27017
       - MONGODB_DB_NAME=doclearn
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - ENV=development
       - DEBUG=true
     depends_on:
-      - postgres
       - mongodb
     restart: unless-stopped
     networks:
       - doclearn-network
 
-  # PostgreSQL - Session metadata, lesson plans, progress
-  postgres:
-    image: postgres:15-alpine
-    container_name: doclearn-postgres
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=doclearn
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - doclearn-network
-
-  # MongoDB - Chat history with buffer-based summarization
+  # MongoDB - All data storage (sessions, chat history, lesson plans)
   mongodb:
     image: mongo:7.0
     container_name: doclearn-mongodb
@@ -78,7 +56,6 @@ services:
       - doclearn-network
 
 volumes:
-  postgres_data:
   mongodb_data:
 
 networks:

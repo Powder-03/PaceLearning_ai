@@ -5,13 +5,9 @@ uvicorn[standard]
 python-multipart
 sse-starlette  # Server-Sent Events for streaming
 
-# Database
-sqlalchemy
-psycopg2-binary
-asyncpg
+# Database (MongoDB only - PostgreSQL removed)
 pymongo
-motor  # Async MongoDB driver for buffer-based chat storage
-alembic  # Database migrations
+motor  # Async MongoDB driver for sessions and chat storage
 
 # Configuration
 pydantic-settings

@@ -2,15 +2,14 @@
 Health Check Routes.
 
 API endpoints for service health monitoring.
+Uses MongoDB for database health checks.
 """
 import logging
 from datetime import datetime
 
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-from sqlalchemy import text
+from fastapi import APIRouter
 
-from app.api.deps import get_db
+from app.services.mongodb import MongoDBService
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -35,23 +34,24 @@ async def health_check():
 
 
 @router.get("/health/ready")
-async def readiness_check(db: Session = Depends(get_db)):
+async def readiness_check():
     """
     Readiness check endpoint.
     
-    Verifies database connectivity and LLM configuration.
+    Verifies MongoDB connectivity and LLM configuration.
     """
     checks = {
-        "database": False,
+        "mongodb": False,
         "gemini_api": False,
     }
     
-    # Check database connectivity
+    # Check MongoDB connectivity
     try:
-        db.execute(text("SELECT 1"))
-        checks["database"] = True
+        db = MongoDBService.get_db()
+        await db.client.admin.command('ping')
+        checks["mongodb"] = True
     except Exception as e:
-        logger.error(f"Database check failed: {str(e)}")
+        logger.error(f"MongoDB check failed: {str(e)}")
     
     # Check Gemini API configuration
     checks["gemini_api"] = bool(settings.GOOGLE_API_KEY)

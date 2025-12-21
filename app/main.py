@@ -2,9 +2,9 @@
 Generation Mode Microservice - Main Application.
 
 AI-powered curriculum generation and interactive tutoring service.
+Uses MongoDB for all data storage (sessions, chat history, etc.).
 """
 import sys
-import os
 import logging
 from contextlib import asynccontextmanager
 
@@ -13,7 +13,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.api.routers import get_all_routers
-from app.db.session import run_migrations, init_db
 from app.services.mongodb import MongoDBService
 
 # Configure logging
@@ -32,6 +31,8 @@ async def lifespan(app: FastAPI):
     
     Manages startup and shutdown tasks.
     """
+    import asyncio
+    
     # =========================================================================
     # STARTUP
     # =========================================================================
@@ -45,37 +46,16 @@ async def lifespan(app: FastAPI):
     log.info(f"Tutoring Model: {settings.TUTORING_MODEL} (Gemini Flash)")
     log.info(f"Streaming Threshold: {settings.STREAMING_TOKEN_THRESHOLD} tokens")
     log.info(f"Memory Buffer Size: {settings.MEMORY_BUFFER_SIZE} messages")
+    log.info(f"Database: MongoDB (PostgreSQL removed)")
     
-    # Run database migrations in executor with timeout (non-blocking)
-    import asyncio
+    # Initialize MongoDB
     try:
-        loop = asyncio.get_event_loop()
-        await asyncio.wait_for(
-            loop.run_in_executor(None, run_migrations),
-            timeout=20.0
-        )
-        log.info("PostgreSQL migrations applied successfully")
-    except asyncio.TimeoutError:
-        log.warning("Migrations timed out (20s) - using existing schema")
-    except Exception as e:
-        log.warning(f"Migrations failed: {str(e)[:100]}")
-        try:
-            await asyncio.wait_for(
-                loop.run_in_executor(None, init_db),
-                timeout=10.0
-            )
-            log.info("PostgreSQL database initialized with create_all")
-        except Exception as e2:
-            log.error(f"PostgreSQL initialization failed: {str(e2)[:100]}")
-    
-    # Initialize MongoDB (with shorter timeout for faster startup)
-    try:
-        await asyncio.wait_for(MongoDBService.connect(), timeout=5.0)
+        await asyncio.wait_for(MongoDBService.connect(), timeout=10.0)
         log.info(f"MongoDB connected: {settings.MONGODB_DB_NAME}")
     except asyncio.TimeoutError:
-        log.warning("MongoDB timeout (5s) - chat may not work")
+        log.error("MongoDB connection timeout (10s) - service may not work properly")
     except Exception as e:
-        log.warning(f"MongoDB failed: {str(e)[:100]}")
+        log.error(f"MongoDB connection failed: {str(e)[:100]}")
     
     # Check LLM configuration (Gemini only)
     if not settings.GOOGLE_API_KEY:

@@ -2,6 +2,7 @@
 Chat Routes.
 
 API endpoints for chat interactions with the AI tutor.
+All services now use MongoDB (PostgreSQL removed).
 
 Supports both burst and streaming responses:
 - /chat: Standard endpoint (auto-detects streaming need, returns full response)
@@ -14,10 +15,9 @@ from typing import AsyncGenerator
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
 from sse_starlette.sse import EventSourceResponse
 
-from app.api.deps import get_db, get_chat_service, get_session_service
+from app.api.deps import get_chat_service, get_session_service
 from app.services import ChatService, SessionService
 from app.schemas import (
     ChatRequest,
@@ -42,7 +42,7 @@ router = APIRouter(prefix="/chat", tags=["Chat"])
 @router.post("", response_model=ChatResponse)
 async def send_message(
     request: ChatRequest,
-    db: Session = Depends(get_db),
+    chat_service: ChatService = Depends(get_chat_service),
 ):
     """
     Send a message to the AI tutor and receive a response.
@@ -67,8 +67,6 @@ async def send_message(
     - `is_day_complete`: Whether all topics for the day are done
     - `is_course_complete`: Whether the entire course is done
     """
-    chat_service = get_chat_service(db)
-    
     try:
         result = await chat_service.send_message(
             session_id=request.session_id,
@@ -97,7 +95,8 @@ async def send_message(
 @router.post("/stream")
 async def send_message_stream(
     request: ChatRequest,
-    db: Session = Depends(get_db),
+    chat_service: ChatService = Depends(get_chat_service),
+    session_service: SessionService = Depends(get_session_service),
 ):
     """
     Send a message and receive streaming response via Server-Sent Events (SSE).
@@ -126,11 +125,8 @@ async def send_message_stream(
     data: {"current_day": 1, "is_day_complete": false}
     ```
     """
-    chat_service = get_chat_service(db)
-    session_service = get_session_service(db)
-    
-    # Validate session exists
-    session = session_service.get_session(request.session_id)
+    # Validate session exists (async)
+    session = await session_service.get_session(request.session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     
@@ -195,7 +191,7 @@ async def send_message_stream(
 @router.post("/start-lesson", response_model=StartLessonResponse)
 async def start_lesson(
     request: StartLessonRequest,
-    db: Session = Depends(get_db),
+    chat_service: ChatService = Depends(get_chat_service),
 ):
     """
     Start or resume a lesson.
@@ -205,8 +201,6 @@ async def start_lesson(
     
     Returns a welcome message and day objectives.
     """
-    chat_service = get_chat_service(db)
-    
     try:
         result = await chat_service.start_lesson(
             session_id=request.session_id,
@@ -235,25 +229,22 @@ async def start_lesson(
 async def get_chat_history(
     session_id: UUID,
     limit: int = 100,
-    db: Session = Depends(get_db),
+    chat_service: ChatService = Depends(get_chat_service),
+    session_service: SessionService = Depends(get_session_service),
 ):
     """
     Get chat history for a session from MongoDB.
     
     Returns summaries (compressed history) and recent messages in buffer.
     """
-    chat_service = get_chat_service(db)
-    
     try:
-        # Get session to include current day
-        from app.api.deps import get_session_service
-        session_service = get_session_service(db)
-        session = session_service.get_session(session_id)
+        # Get session to include current day (async)
+        session = await session_service.get_session(session_id)
         
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
         
-        # Now async since it fetches from MongoDB
+        # Fetch from MongoDB
         history_data = await chat_service.get_chat_history(session_id, limit)
         
         return ChatHistoryResponse(
@@ -267,7 +258,7 @@ async def get_chat_history(
                 for msg in history_data["recent_messages"]
             ],
             total_messages=len(history_data["recent_messages"]),
-            current_day=session.current_day,
+            current_day=session["current_day"],
             summaries=history_data.get("summaries", []),
             total_summaries=history_data.get("total_summaries", 0),
         )

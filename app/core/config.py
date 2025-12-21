@@ -3,8 +3,7 @@ from typing import Optional
 
 
 class Settings(BaseSettings):
-    # Database
-    DATABASE_URL: str = "postgresql+psycopg2://user:password@host:port/db"
+    # Database (MongoDB only - PostgreSQL removed)
     MONGODB_URL: str = "mongodb://localhost:27017"
     MONGODB_DB_NAME: str = "doclearn"
     

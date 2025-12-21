@@ -2,40 +2,25 @@
 API Dependencies.
 
 Provides dependency injection for API routes.
+All services now use MongoDB instead of PostgreSQL.
 """
-from typing import Generator
-
-from sqlalchemy.orm import Session
-
-from app.db.session import get_session_local
 from app.services import SessionService, ChatService, PlanService
 
 
-def get_db() -> Generator[Session, None, None]:
-    """
-    Database session dependency.
-    
-    Yields a database session and ensures proper cleanup.
-    """
-    db = get_session_local()
-    try:
-        yield db
-    finally:
-        db.close()
+# Create service instances (MongoDB-based, no DB session needed)
+_session_service = SessionService()
 
 
-def get_session_service(db: Session) -> SessionService:
-    """Get SessionService instance."""
-    return SessionService(db)
+def get_session_service() -> SessionService:
+    """Get SessionService instance (MongoDB-based)."""
+    return _session_service
 
 
-def get_chat_service(db: Session) -> ChatService:
+def get_chat_service() -> ChatService:
     """Get ChatService instance."""
-    session_service = SessionService(db)
-    return ChatService(session_service)
+    return ChatService(_session_service)
 
 
-def get_plan_service(db: Session) -> PlanService:
+def get_plan_service() -> PlanService:
     """Get PlanService instance."""
-    session_service = SessionService(db)
-    return PlanService(session_service)
+    return PlanService(_session_service)

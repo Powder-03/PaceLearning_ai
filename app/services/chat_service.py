@@ -8,10 +8,9 @@ Supports both burst and streaming response modes:
 - Burst: Complete response returned at once (< 100 expected tokens)
 - Streaming: Token-by-token delivery (>= 100 expected tokens)
 
-Uses MongoDB for chat storage with buffer-based summarization:
-- Stores last 10 messages in buffer
-- When buffer fills, summarizes and clears
-- Summaries persist for long-term context
+Uses MongoDB for all storage:
+- Sessions stored in MongoDB
+- Chat messages stored in buffer with summarization
 """
 import json
 import logging
@@ -20,8 +19,7 @@ from uuid import UUID
 
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
-from app.db.models import LearningSession, SessionStatus
-from app.services.session_service import SessionService
+from app.services.session_service import SessionService, SessionStatus
 from app.services.memory import memory_service, MemoryService
 from app.graphs import invoke_generation_graph, create_initial_state
 from app.core.llm_factory import get_tutor_llm
@@ -78,17 +76,17 @@ class ChatService:
         Raises:
             ValueError: If session not found or not ready
         """
-        # Get session
-        session = self.session_service.get_session(session_id)
+        # Get session (async)
+        session = await self.session_service.get_session(session_id)
         if not session:
             raise ValueError(f"Session {session_id} not found")
         
-        if session.status not in [SessionStatus.READY.value, SessionStatus.IN_PROGRESS.value]:
-            raise ValueError(f"Session is not ready for chat. Status: {session.status}")
+        if session["status"] not in [SessionStatus.READY.value, SessionStatus.IN_PROGRESS.value]:
+            raise ValueError(f"Session is not ready for chat. Status: {session['status']}")
         
         # Update status to in progress if needed
-        if session.status == SessionStatus.READY.value:
-            self.session_service.set_status(session_id, SessionStatus.IN_PROGRESS.value)
+        if session["status"] == SessionStatus.READY.value:
+            await self.session_service.set_status(session_id, SessionStatus.IN_PROGRESS.value)
         
         # Build graph state from session (now includes MongoDB chat history)
         state = await self._build_state_from_session(session, message)
@@ -103,25 +101,25 @@ class ChatService:
         
         # Handle topic advancement
         if result.get("should_advance_topic"):
-            self.session_service.advance_topic(session_id)
+            await self.session_service.advance_topic(session_id)
         
         # Handle day completion
         if result.get("is_day_complete"):
             if not result.get("is_course_complete"):
                 # Move to next day
-                self.session_service.advance_day(session_id)
+                await self.session_service.advance_day(session_id)
         
         # Handle course completion
         if result.get("is_course_complete"):
-            self.session_service.set_status(session_id, SessionStatus.COMPLETED.value)
+            await self.session_service.set_status(session_id, SessionStatus.COMPLETED.value)
         
         # Refresh session for latest state
-        session = self.session_service.get_session(session_id)
+        session = await self.session_service.get_session(session_id)
         
         return {
             "response": result.get("ai_response", ""),
-            "current_day": session.current_day,
-            "current_topic_index": session.current_topic_index,
+            "current_day": session["current_day"],
+            "current_topic_index": session["current_topic_index"],
             "is_day_complete": result.get("is_day_complete", False),
             "is_course_complete": result.get("is_course_complete", False),
         }
@@ -144,26 +142,26 @@ class ChatService:
         Raises:
             ValueError: If session not found or invalid day
         """
-        session = self.session_service.get_session(session_id)
+        session = await self.session_service.get_session(session_id)
         if not session:
             raise ValueError(f"Session {session_id} not found")
         
-        if session.status == SessionStatus.PLANNING.value:
+        if session["status"] == SessionStatus.PLANNING.value:
             raise ValueError("Lesson plan is still being generated")
         
         # Set day if specified
         if day is not None:
-            if day < 1 or day > session.total_days:
-                raise ValueError(f"Day must be between 1 and {session.total_days}")
-            self.session_service.update_progress(session_id, current_day=day, current_topic_index=0)
-            session = self.session_service.get_session(session_id)
+            if day < 1 or day > session["total_days"]:
+                raise ValueError(f"Day must be between 1 and {session['total_days']}")
+            await self.session_service.update_progress(session_id, current_day=day, current_topic_index=0)
+            session = await self.session_service.get_session(session_id)
         
         # Get day content
-        lesson_plan = session.lesson_plan or {}
+        lesson_plan = session.get("lesson_plan") or {}
         days = lesson_plan.get("days", [])
         
-        if session.current_day <= len(days):
-            day_content = days[session.current_day - 1]
+        if session["current_day"] <= len(days):
+            day_content = days[session["current_day"] - 1]
         else:
             day_content = {}
         
@@ -177,8 +175,8 @@ class ChatService:
             await self.memory.add_assistant_message(str(session_id), result["ai_response"])
         
         return {
-            "current_day": session.current_day,
-            "day_title": day_content.get("title", f"Day {session.current_day}"),
+            "current_day": session["current_day"],
+            "day_title": day_content.get("title", f"Day {session['current_day']}"),
             "objectives": day_content.get("objectives", []),
             "welcome_message": result.get("ai_response", ""),
         }
@@ -201,7 +199,7 @@ class ChatService:
         Raises:
             ValueError: If session not found
         """
-        session = self.session_service.get_session(session_id)
+        session = await self.session_service.get_session(session_id)
         if not session:
             raise ValueError(f"Session {session_id} not found")
         
@@ -236,22 +234,22 @@ class ChatService:
         Raises:
             ValueError: If session not found or not ready
         """
-        # Get session
-        session = self.session_service.get_session(session_id)
+        # Get session (async)
+        session = await self.session_service.get_session(session_id)
         if not session:
             raise ValueError(f"Session {session_id} not found")
         
-        if session.status not in [SessionStatus.READY.value, SessionStatus.IN_PROGRESS.value]:
-            raise ValueError(f"Session is not ready for chat. Status: {session.status}")
+        if session["status"] not in [SessionStatus.READY.value, SessionStatus.IN_PROGRESS.value]:
+            raise ValueError(f"Session is not ready for chat. Status: {session['status']}")
         
         # Update status to in progress if needed
-        if session.status == SessionStatus.READY.value:
-            self.session_service.set_status(session_id, SessionStatus.IN_PROGRESS.value)
+        if session["status"] == SessionStatus.READY.value:
+            await self.session_service.set_status(session_id, SessionStatus.IN_PROGRESS.value)
         
         # Build context for streaming
-        lesson_plan = session.lesson_plan or {}
-        current_day = session.current_day
-        current_topic_index = session.current_topic_index
+        lesson_plan = session.get("lesson_plan") or {}
+        current_day = session["current_day"]
+        current_topic_index = session["current_topic_index"]
         
         # Get current day's content
         days = lesson_plan.get("days", [])
@@ -264,9 +262,9 @@ class ChatService:
         
         # Build system prompt with MongoDB memory
         system_prompt = TUTOR_SYSTEM_PROMPT.format(
-            topic=session.topic,
+            topic=session["topic"],
             current_day=current_day,
-            total_days=session.total_days,
+            total_days=session["total_days"],
             day_title=day_content.get("title", f"Day {current_day}"),
             day_objectives=", ".join(day_content.get("objectives", [])),
             current_topic=json.dumps(current_topic, indent=2) if current_topic else "Wrapping up the day",
@@ -304,27 +302,27 @@ class ChatService:
             
             # Handle topic advancement
             if should_advance:
-                self.session_service.advance_topic(session_id)
+                await self.session_service.advance_topic(session_id)
             
             # Check completion status
             is_day_complete = should_advance and current_topic_index >= len(topics) - 1
-            is_course_complete = is_day_complete and current_day >= session.total_days
+            is_course_complete = is_day_complete and current_day >= session["total_days"]
             
             # Handle day completion
             if is_day_complete and not is_course_complete:
-                self.session_service.advance_day(session_id)
+                await self.session_service.advance_day(session_id)
             
             # Handle course completion
             if is_course_complete:
-                self.session_service.set_status(session_id, SessionStatus.COMPLETED.value)
+                await self.session_service.set_status(session_id, SessionStatus.COMPLETED.value)
             
             # Refresh session for latest state
-            session = self.session_service.get_session(session_id)
+            session = await self.session_service.get_session(session_id)
             
             # Yield final metadata
             yield ("", {
-                "current_day": session.current_day,
-                "current_topic_index": session.current_topic_index,
+                "current_day": session["current_day"],
+                "current_topic_index": session["current_topic_index"],
                 "is_day_complete": is_day_complete,
                 "is_course_complete": is_course_complete,
             })
@@ -349,36 +347,36 @@ class ChatService:
     
     async def _build_state_from_session(
         self,
-        session: LearningSession,
+        session: Dict[str, Any],
         user_message: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        Build graph state from a session model.
+        Build graph state from a session document.
         
         Fetches chat history from MongoDB.
         
         Args:
-            session: LearningSession instance
+            session: Session document from MongoDB
             user_message: Current user message (optional)
             
         Returns:
             Graph state dictionary
         """
         # Get memory context from MongoDB
-        memory_context = await self.memory.get_context_for_graph(str(session.session_id))
+        memory_context = await self.memory.get_context_for_graph(session["session_id"])
         
         # Convert stored chat history to LangChain messages
         chat_history = self._convert_history_to_messages(memory_context.get("chat_history", []))
         
         return create_initial_state(
-            session_id=str(session.session_id),
-            user_id=str(session.user_id),
-            topic=session.topic,
-            total_days=session.total_days,
-            time_per_day=session.time_per_day,
-            lesson_plan=session.lesson_plan,
-            current_day=session.current_day,
-            current_topic_index=session.current_topic_index,
+            session_id=session["session_id"],
+            user_id=session["user_id"],
+            topic=session["topic"],
+            total_days=session["total_days"],
+            time_per_day=session["time_per_day"],
+            lesson_plan=session.get("lesson_plan"),
+            current_day=session["current_day"],
+            current_topic_index=session["current_topic_index"],
             chat_history=chat_history,
             memory_summary=memory_context.get("memory_summary"),
         ) | {"user_message": user_message}
