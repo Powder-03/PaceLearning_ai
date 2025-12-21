@@ -26,6 +26,7 @@ steps:
   - '2'    # Increased for better performance
   - '--timeout'
   - '300'
+  - '--add-cloudsql-instances=gen-lang-client-0890672298:asia-south1:doclearn-pg'
   - '--set-env-vars=MONGODB_DB_NAME=doclearn,ENV=production,DEBUG=false'
   - '--update-secrets=DATABASE_URL=doclearn-db-url:latest,MONGODB_URL=doclearn-mongo-url:latest,GOOGLE_API_KEY=doclearn-gemini-key:latest'
   id: 'Deploy'
