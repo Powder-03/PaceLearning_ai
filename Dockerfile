@@ -24,10 +24,6 @@ RUN pip install --no-index --find-links=/app/wheels /app/wheels/*
 # Copy application code
 COPY ./app /app/app
 
-# Copy Alembic for database migrations
-COPY ./alembic /app/alembic
-COPY ./alembic.ini /app/alembic.ini
-
 # Expose port (Cloud Run will set PORT env var)
 EXPOSE 8080
 
