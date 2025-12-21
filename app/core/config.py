@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     GOOGLE_API_KEY: Optional[str] = None
     
     # LLM Model Configuration (All Gemini)
+    # Available models: gemini-2.5-pro, gemini-2.5-flash, gemini-1.5-pro, gemini-1.5-flash
     PLANNING_MODEL: str = "gemini-2.5-pro"  # Powerful for curriculum generation
     TUTORING_MODEL: str = "gemini-2.5-flash"  # Fast for interactive tutoring
     

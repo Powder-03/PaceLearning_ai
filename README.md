@@ -80,7 +80,12 @@ app/
    docker-compose up -d postgres mongodb
    ```
 
-4. **Run the application:**
+4. **Run database migrations:**
+   ```bash
+   alembic upgrade head
+   ```
+
+5. **Run the application:**
    ```bash
    uvicorn app.main:app --reload
    ```
@@ -99,6 +104,51 @@ docker-compose --profile dev up -d
 # View logs
 docker-compose logs -f app
 ```
+
+## Database Migrations (Alembic)
+
+This project uses Alembic for database schema migrations.
+
+### Common Commands
+
+```bash
+# Apply all pending migrations
+alembic upgrade head
+
+# Rollback last migration
+alembic downgrade -1
+
+# Rollback all migrations
+alembic downgrade base
+
+# Show current revision
+alembic current
+
+# Show migration history
+alembic history
+
+# Create a new migration (auto-detect changes)
+alembic revision --autogenerate -m "Add new column"
+
+# Create an empty migration (manual)
+alembic revision -m "Custom migration"
+```
+
+### Creating New Migrations
+
+When you modify models in `app/db/models.py`:
+
+1. **Auto-generate migration:**
+   ```bash
+   alembic revision --autogenerate -m "Description of changes"
+   ```
+
+2. **Review the generated file** in `alembic/versions/`
+
+3. **Apply the migration:**
+   ```bash
+   alembic upgrade head
+   ```
 
 ## API Endpoints
 

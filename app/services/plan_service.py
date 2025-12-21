@@ -99,12 +99,8 @@ class PlanService:
                     status=SessionStatus.READY.value,
                 )
                 
-                # Store the welcome message in chat history
-                self.session_service.append_to_chat_history(
-                    session_id=session.session_id,
-                    human_message="[Plan generated]",
-                    ai_message=ai_response,
-                )
+                # Note: Chat history is now stored in MongoDB
+                # The welcome message will be stored when user starts the lesson
                 
                 logger.info(f"Successfully generated plan for session {session.session_id}")
                 

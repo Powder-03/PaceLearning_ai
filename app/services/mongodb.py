@@ -21,10 +21,18 @@ class MongoDBService:
     
     @classmethod
     async def connect(cls) -> None:
-        """Initialize MongoDB connection."""
+        """Initialize MongoDB connection with timeout."""
         if cls._client is None:
-            cls._client = AsyncIOMotorClient(settings.MONGODB_URL)
+            cls._client = AsyncIOMotorClient(
+                settings.MONGODB_URL,
+                serverSelectionTimeoutMS=5000,  # 5 second timeout
+                connectTimeoutMS=5000,
+                socketTimeoutMS=5000,
+            )
             cls._db = cls._client[settings.MONGODB_DB_NAME]
+            
+            # Test connection with ping
+            await cls._client.admin.command('ping')
             
             # Create indexes for optimal query performance
             await cls._create_indexes()

@@ -11,6 +11,7 @@ psycopg2-binary
 asyncpg
 pymongo
 motor  # Async MongoDB driver for buffer-based chat storage
+alembic  # Database migrations
 
 # Configuration
 pydantic-settings

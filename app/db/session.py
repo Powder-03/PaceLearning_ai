@@ -3,6 +3,10 @@ Database Session Management.
 
 Provides thread-safe database session creation and dependency injection
 for FastAPI routes.
+
+Note: For schema migrations, use Alembic:
+    alembic upgrade head    # Apply all migrations
+    alembic revision --autogenerate -m "description"  # Create new migration
 """
 import threading
 from typing import Generator
@@ -91,9 +95,41 @@ def get_db_context() -> Generator[Session, None, None]:
 
 
 def init_db() -> None:
-    """Initialize database tables."""
+    """
+    Initialize database tables.
+    
+    Note: In production, use Alembic migrations instead:
+        alembic upgrade head
+    
+    This method uses create_all() which is fine for development
+    but doesn't handle schema changes properly.
+    """
     engine = get_engine()
     Base.metadata.create_all(bind=engine)
+
+
+def run_migrations() -> None:
+    """
+    Run Alembic migrations programmatically.
+    
+    This applies all pending migrations to bring the database
+    schema up to date.
+    """
+    from alembic.config import Config
+    from alembic import command
+    import os
+    
+    # Get the path to alembic.ini
+    base_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    alembic_ini_path = os.path.join(base_path, "alembic.ini")
+    
+    if os.path.exists(alembic_ini_path):
+        alembic_cfg = Config(alembic_ini_path)
+        alembic_cfg.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+        command.upgrade(alembic_cfg, "head")
+    else:
+        # Fallback to create_all if alembic.ini not found
+        init_db()
 
 
 def drop_db() -> None:
