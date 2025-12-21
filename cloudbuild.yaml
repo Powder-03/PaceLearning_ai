@@ -30,7 +30,7 @@ steps:
   - '10'
   - '--min-instances'
   - '0'
-  - '--startup-cpu-boost'  # Faster cold starts
+  - '--cpu-boost'  # Faster cold starts
   - '--set-env-vars=MONGODB_DB_NAME=doclearn,ENV=production,DEBUG=false'
   - '--update-secrets=DATABASE_URL=doclearn-db-url:latest,MONGODB_URL=doclearn-mongo-url:latest,GOOGLE_API_KEY=doclearn-gemini-key:latest'
   id: 'Deploy'
