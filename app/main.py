@@ -13,7 +13,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.api.routers import get_all_routers
-from app.db.session import run_migrations, init_db
 from app.services.mongodb import MongoDBService
 
 # Configure logging
@@ -30,53 +29,21 @@ async def lifespan(app: FastAPI):
     """
     Application lifespan handler.
     
-    Manages startup and shutdown tasks with aggressive timeouts for Cloud Run.
+    Minimal startup - all services connect on first use.
     """
-    # =========================================================================
-    # STARTUP - Ultra-fast with all operations time-limited
-    # =========================================================================
     log.info("=" * 60)
-    log.info(f"Starting {settings.SERVICE_NAME} v{settings.SERVICE_VERSION}")
+    log.info(f"{settings.SERVICE_NAME} v{settings.SERVICE_VERSION}")
     log.info(f"Environment: {settings.ENV}")
-    log.info("=" * 60)
-    
-    import asyncio
-    
-    # Skip migrations entirely - run manually or in init container
-    # Migrations can take 30+ seconds on cold PostgreSQL connections
-    log.info("Skipping migrations - run manually: alembic upgrade head")
-    log.info("Using existing database schema")
-    
-    # Initialize MongoDB (with very short timeout)
-    try:
-        await asyncio.wait_for(MongoDBService.connect(), timeout=3.0)
-        log.info(f"✓ MongoDB connected: {settings.MONGODB_DB_NAME}")
-    except asyncio.TimeoutError:
-        log.warning("⚠️  MongoDB timeout (3s) - chat may not work")
-    except Exception as e:
-        log.warning(f"⚠️  MongoDB failed: {str(e)[:100]}")
-    
-    # Check API key (instant)
-    if settings.GOOGLE_API_KEY:
-        log.info("✓ Gemini API key configured")
-    
-    log.info("=" * 60)
-    log.info("Service ready in <5 seconds")
+    log.info("Services connect lazily on first request")
     log.info("=" * 60)
     
     yield
     
-    # =========================================================================
-    # SHUTDOWN
-    # =========================================================================
-    log.info("Shutting down...")
-    
+    # Shutdown
     try:
         await MongoDBService.disconnect()
     except Exception:
         pass
-    
-    log.info("Shutdown complete")
 
 
 # =============================================================================

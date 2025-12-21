@@ -31,5 +31,9 @@ COPY ./alembic.ini /app/alembic.ini
 # Expose port (Cloud Run will set PORT env var)
 EXPOSE 8080
 
+# Health check for local testing
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health/live')"
+
 # Use PORT environment variable from Cloud Run
-CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}
+CMD exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080} --log-level info
