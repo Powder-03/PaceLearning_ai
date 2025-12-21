@@ -54,3 +54,4 @@ This project is configured for deployment to Google Cloud Run. The `cloudbuild.y
    ```bash
    gcloud builds submit --config cloudbuild.yaml .
    ```
+.add .
