@@ -23,5 +23,8 @@ google-generativeai  # Direct Gemini SDK for test endpoints
 # HTTP Client
 httpx
 
+# Authentication (Clerk JWT validation)
+PyJWT[crypto]  # JWT decoding with RSA support
+
 # Utilities
 python-dateutil

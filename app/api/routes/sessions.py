@@ -3,6 +3,7 @@ Session Routes.
 
 API endpoints for managing learning sessions.
 All endpoints now use MongoDB for data storage.
+All endpoints are protected with Clerk authentication.
 """
 import logging
 from typing import Optional
@@ -10,7 +11,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from app.api.deps import get_session_service, get_plan_service
+from app.api.deps import (
+    get_session_service, 
+    get_plan_service,
+    get_current_user,
+    ClerkUser,
+)
 from app.services import SessionService, PlanService
 from app.schemas import (
     CreatePlanRequest,
@@ -30,6 +36,7 @@ router = APIRouter(prefix="/sessions", tags=["Sessions"])
 @router.post("", response_model=CreatePlanResponse, status_code=201)
 async def create_session(
     request: CreatePlanRequest,
+    current_user: ClerkUser = Depends(get_current_user),
     plan_service: PlanService = Depends(get_plan_service),
 ):
     """
@@ -41,14 +48,15 @@ async def create_session(
     3. Returns the session_id for subsequent interactions
     
     **Request Body:**
-    - `user_id`: User identifier
     - `topic`: Topic to learn (e.g., "Machine Learning Basics")
     - `total_days`: Number of days (1-90)
     - `time_per_day`: Daily time commitment (e.g., "1 hour")
+    
+    **Note:** User ID is extracted from the Clerk JWT token.
     """
     try:
         result = await plan_service.create_plan(
-            user_id=request.user_id,
+            user_id=current_user.user_id,
             topic=request.topic,
             total_days=request.total_days,
             time_per_day=request.time_per_day,
@@ -71,7 +79,7 @@ async def create_session(
 
 @router.get("", response_model=SessionListResponse)
 async def list_sessions(
-    user_id: UUID = Query(..., description="User identifier"),
+    current_user: ClerkUser = Depends(get_current_user),
     mode: Optional[str] = Query(None, description="Filter by mode"),
     status: Optional[str] = Query(None, description="Filter by status"),
     limit: int = Query(20, ge=1, le=100, description="Max results"),
@@ -79,25 +87,26 @@ async def list_sessions(
     session_service: SessionService = Depends(get_session_service),
 ):
     """
-    List all learning sessions for a user.
+    List all learning sessions for the authenticated user.
     
     Supports filtering by mode and status, with pagination.
+    User ID is extracted from the Clerk JWT token.
     """
     sessions = await session_service.get_user_sessions(
-        user_id=user_id,
+        user_id=current_user.user_id,
         mode=mode,
         status=status,
         limit=limit,
         offset=offset,
     )
     
-    total = await session_service.count_user_sessions(user_id, mode)
+    total = await session_service.count_user_sessions(current_user.user_id, mode)
     
     return SessionListResponse(
         sessions=[
             SessionResponse(
                 session_id=UUID(s["session_id"]),
-                user_id=UUID(s["user_id"]),
+                user_id=str(s["user_id"]),  # Clerk user IDs are strings
                 topic=s["topic"],
                 total_days=s["total_days"],
                 time_per_day=s["time_per_day"],
@@ -118,18 +127,25 @@ async def list_sessions(
 @router.get("/{session_id}", response_model=SessionResponse)
 async def get_session(
     session_id: UUID,
+    current_user: ClerkUser = Depends(get_current_user),
     session_service: SessionService = Depends(get_session_service),
 ):
     """
     Get details of a specific learning session.
+    
+    Users can only access their own sessions.
     """
     session = await session_service.get_session(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     
+    # Verify ownership
+    if session["user_id"] != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to access this session")
+    
     return SessionResponse(
         session_id=UUID(session["session_id"]),
-        user_id=UUID(session["user_id"]),
+        user_id=str(session["user_id"]),  # Clerk user IDs are strings
         topic=session["topic"],
         total_days=session["total_days"],
         time_per_day=session["time_per_day"],
@@ -146,13 +162,23 @@ async def get_session(
 @router.get("/{session_id}/plan", response_model=LessonPlanResponse)
 async def get_lesson_plan(
     session_id: UUID,
+    current_user: ClerkUser = Depends(get_current_user),
     plan_service: PlanService = Depends(get_plan_service),
+    session_service: SessionService = Depends(get_session_service),
 ):
     """
     Get the full lesson plan for a session.
     
     Returns the complete curriculum with progress information.
+    Users can only access their own sessions.
     """
+    # Verify ownership first
+    session = await session_service.get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session["user_id"] != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to access this session")
+    
     try:
         result = await plan_service.get_plan(session_id)
         
@@ -173,13 +199,23 @@ async def get_lesson_plan(
 async def get_day_content(
     session_id: UUID,
     day: int,
+    current_user: ClerkUser = Depends(get_current_user),
     plan_service: PlanService = Depends(get_plan_service),
+    session_service: SessionService = Depends(get_session_service),
 ):
     """
     Get content for a specific day in the lesson plan.
     
     Useful for displaying day details in a sidebar or preview.
+    Users can only access their own sessions.
     """
+    # Verify ownership first
+    session = await session_service.get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session["user_id"] != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to access this session")
+    
     try:
         return await plan_service.get_day_content(session_id, day)
     except ValueError as e:
@@ -190,16 +226,20 @@ async def get_day_content(
 async def update_progress(
     session_id: UUID,
     request: UpdateProgressRequest,
+    current_user: ClerkUser = Depends(get_current_user),
     session_service: SessionService = Depends(get_session_service),
 ):
     """
     Update learning progress for a session.
     
     Can set current day and/or current topic index.
+    Users can only update their own sessions.
     """
     session = await session_service.get_session(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
+    if session["user_id"] != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to access this session")
     
     updated = await session_service.update_progress(
         session_id=session_id,
@@ -222,14 +262,19 @@ async def update_progress(
 @router.post("/{session_id}/advance-day", response_model=ProgressResponse)
 async def advance_day(
     session_id: UUID,
+    current_user: ClerkUser = Depends(get_current_user),
     session_service: SessionService = Depends(get_session_service),
 ):
     """
     Move to the next day in the lesson plan.
+    
+    Users can only advance their own sessions.
     """
     session = await session_service.get_session(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
+    if session["user_id"] != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to access this session")
     
     if session["current_day"] >= session["total_days"]:
         raise HTTPException(
@@ -254,14 +299,19 @@ async def advance_day(
 async def goto_day(
     session_id: UUID,
     day: int,
+    current_user: ClerkUser = Depends(get_current_user),
     session_service: SessionService = Depends(get_session_service),
 ):
     """
     Jump to a specific day (for reviewing past lessons).
+    
+    Users can only modify their own sessions.
     """
     session = await session_service.get_session(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
+    if session["user_id"] != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to access this session")
     
     if day < 1 or day > session["total_days"]:
         raise HTTPException(
@@ -290,11 +340,20 @@ async def goto_day(
 @router.delete("/{session_id}", status_code=204)
 async def delete_session(
     session_id: UUID,
+    current_user: ClerkUser = Depends(get_current_user),
     session_service: SessionService = Depends(get_session_service),
 ):
     """
     Delete a learning session.
+    
+    Users can only delete their own sessions.
     """
+    session = await session_service.get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session["user_id"] != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this session")
+    
     deleted = await session_service.delete_session(session_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Session not found")

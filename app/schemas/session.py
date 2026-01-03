@@ -11,8 +11,10 @@ from pydantic import BaseModel, Field
 
 
 class CreatePlanRequest(BaseModel):
-    """Request model for creating a new learning plan."""
-    user_id: UUID = Field(..., description="User identifier")
+    """Request model for creating a new learning plan.
+    
+    Note: user_id is extracted from the Clerk JWT token, not from the request body.
+    """
     topic: str = Field(
         ..., 
         min_length=3, 
@@ -35,7 +37,6 @@ class CreatePlanRequest(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "user_id": "123e4567-e89b-12d3-a456-426614174000",
                 "topic": "Introduction to Machine Learning",
                 "total_days": 14,
                 "time_per_day": "1 hour"
@@ -63,7 +64,7 @@ class CreatePlanResponse(BaseModel):
 class SessionResponse(BaseModel):
     """Response model for session details."""
     session_id: UUID
-    user_id: UUID
+    user_id: str  # Clerk user IDs are strings (e.g., "user_2a123...")
     topic: str
     total_days: int
     time_per_day: str

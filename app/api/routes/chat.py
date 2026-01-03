@@ -3,6 +3,7 @@ Chat Routes.
 
 API endpoints for chat interactions with the AI tutor.
 All services now use MongoDB (PostgreSQL removed).
+All endpoints are protected with Clerk authentication.
 
 Supports both burst and streaming responses:
 - /chat: Standard endpoint (auto-detects streaming need, returns full response)
@@ -17,7 +18,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sse_starlette.sse import EventSourceResponse
 
-from app.api.deps import get_chat_service, get_session_service
+from app.api.deps import (
+    get_chat_service, 
+    get_session_service,
+    get_current_user,
+    ClerkUser,
+)
 from app.services import ChatService, SessionService
 from app.schemas import (
     ChatRequest,
@@ -39,10 +45,26 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
 
+async def _verify_session_ownership(
+    session_id: UUID,
+    user_id: str,
+    session_service: SessionService,
+) -> dict:
+    """Helper to verify session exists and belongs to the user."""
+    session = await session_service.get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session["user_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to access this session")
+    return session
+
+
 @router.post("", response_model=ChatResponse)
 async def send_message(
     request: ChatRequest,
+    current_user: ClerkUser = Depends(get_current_user),
     chat_service: ChatService = Depends(get_chat_service),
+    session_service: SessionService = Depends(get_session_service),
 ):
     """
     Send a message to the AI tutor and receive a response.
@@ -67,6 +89,9 @@ async def send_message(
     - `is_day_complete`: Whether all topics for the day are done
     - `is_course_complete`: Whether the entire course is done
     """
+    # Verify ownership
+    await _verify_session_ownership(request.session_id, current_user.user_id, session_service)
+    
     try:
         result = await chat_service.send_message(
             session_id=request.session_id,
@@ -95,6 +120,7 @@ async def send_message(
 @router.post("/stream")
 async def send_message_stream(
     request: ChatRequest,
+    current_user: ClerkUser = Depends(get_current_user),
     chat_service: ChatService = Depends(get_chat_service),
     session_service: SessionService = Depends(get_session_service),
 ):
@@ -125,10 +151,8 @@ async def send_message_stream(
     data: {"current_day": 1, "is_day_complete": false}
     ```
     """
-    # Validate session exists (async)
-    session = await session_service.get_session(request.session_id)
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+    # Validate session exists and belongs to user
+    await _verify_session_ownership(request.session_id, current_user.user_id, session_service)
     
     async def event_generator() -> AsyncGenerator[dict, None]:
         try:
@@ -191,7 +215,9 @@ async def send_message_stream(
 @router.post("/start-lesson", response_model=StartLessonResponse)
 async def start_lesson(
     request: StartLessonRequest,
+    current_user: ClerkUser = Depends(get_current_user),
     chat_service: ChatService = Depends(get_chat_service),
+    session_service: SessionService = Depends(get_session_service),
 ):
     """
     Start or resume a lesson.
@@ -201,6 +227,9 @@ async def start_lesson(
     
     Returns a welcome message and day objectives.
     """
+    # Verify ownership
+    await _verify_session_ownership(request.session_id, current_user.user_id, session_service)
+    
     try:
         result = await chat_service.start_lesson(
             session_id=request.session_id,
@@ -229,6 +258,7 @@ async def start_lesson(
 async def get_chat_history(
     session_id: UUID,
     limit: int = 100,
+    current_user: ClerkUser = Depends(get_current_user),
     chat_service: ChatService = Depends(get_chat_service),
     session_service: SessionService = Depends(get_session_service),
 ):
@@ -238,11 +268,8 @@ async def get_chat_history(
     Returns summaries (compressed history) and recent messages in buffer.
     """
     try:
-        # Get session to include current day (async)
-        session = await session_service.get_session(session_id)
-        
-        if not session:
-            raise HTTPException(status_code=404, detail="Session not found")
+        # Verify ownership
+        session = await _verify_session_ownership(session_id, current_user.user_id, session_service)
         
         # Fetch from MongoDB
         history_data = await chat_service.get_chat_history(session_id, limit)

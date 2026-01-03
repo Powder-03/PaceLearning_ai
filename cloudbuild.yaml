@@ -27,7 +27,7 @@ steps:
   - '--timeout'
   - '300'
   - '--set-env-vars=MONGODB_DB_NAME=doclearn,ENV=production,DEBUG=false'
-  - '--update-secrets=MONGODB_URL=doclearn-mongo-url:latest,GOOGLE_API_KEY=doclearn-gemini-key:latest'
+  - '--update-secrets=MONGODB_URL=doclearn-mongo-url:latest,GOOGLE_API_KEY=doclearn-gemini-key:latest,CLERK_SECRET_KEY=doclearn-clerk-secret:latest,CLERK_JWKS_URL=doclearn-clerk-jwks-url:latest,CLERK_ISSUER=doclearn-clerk-issuer:latest'
   id: 'Deploy'
 
 images:

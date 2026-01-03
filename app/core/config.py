@@ -11,6 +11,17 @@ class Settings(BaseSettings):
     ENV: str = "development"
     DEBUG: bool = False
     
+    # Clerk Authentication
+    # Get these from your Clerk Dashboard: https://dashboard.clerk.com
+    # CLERK_SECRET_KEY is used for backend API calls (optional)
+    CLERK_SECRET_KEY: Optional[str] = None
+    # CLERK_JWKS_URL is your Clerk instance's JWKS endpoint for JWT verification
+    # Format: https://<your-clerk-frontend-api>.clerk.accounts.dev/.well-known/jwks.json
+    CLERK_JWKS_URL: Optional[str] = None
+    # CLERK_ISSUER is your Clerk instance URL for JWT issuer validation
+    # Format: https://<your-clerk-frontend-api>.clerk.accounts.dev
+    CLERK_ISSUER: Optional[str] = None
+    
     # LLM API Keys (Gemini only)
     GOOGLE_API_KEY: Optional[str] = None
     
