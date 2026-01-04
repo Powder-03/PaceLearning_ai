@@ -25,6 +25,7 @@ httpx
 
 # Authentication (Simple JWT)
 PyJWT  # JWT encoding/decoding
+email-validator  # For Pydantic EmailStr validation
 
 # Utilities
 python-dateutil
