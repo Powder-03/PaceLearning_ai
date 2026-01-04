@@ -45,9 +45,10 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install nginx
+# Install nginx and supervisor
 RUN apt-get update && apt-get install -y nginx supervisor && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    mkdir -p /var/log/supervisor /var/log/nginx /var/www/html
 
 # Copy Python wheels from backend builder
 COPY --from=backend-builder /app/wheels /app/wheels

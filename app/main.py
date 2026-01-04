@@ -48,14 +48,21 @@ async def lifespan(app: FastAPI):
     log.info(f"Memory Buffer Size: {settings.MEMORY_BUFFER_SIZE} messages")
     log.info(f"Database: MongoDB (PostgreSQL removed)")
     
-    # Initialize MongoDB
-    try:
-        await asyncio.wait_for(MongoDBService.connect(), timeout=10.0)
-        log.info(f"MongoDB connected: {settings.MONGODB_DB_NAME}")
-    except asyncio.TimeoutError:
-        log.error("MongoDB connection timeout (10s) - service may not work properly")
-    except Exception as e:
-        log.error(f"MongoDB connection failed: {str(e)[:100]}")
+    # Initialize MongoDB with retry
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            await asyncio.wait_for(MongoDBService.connect(), timeout=60.0)
+            log.info(f"MongoDB connected: {settings.MONGODB_DB_NAME}")
+            break
+        except asyncio.TimeoutError:
+            log.error(f"MongoDB connection timeout (attempt {attempt + 1}/{max_retries})")
+            if attempt == max_retries - 1:
+                log.error("MongoDB connection failed after all retries - service may not work properly")
+        except Exception as e:
+            log.error(f"MongoDB connection failed (attempt {attempt + 1}/{max_retries}): {str(e)[:100]}")
+            if attempt < max_retries - 1:
+                await asyncio.sleep(2)  # Wait before retry
     
     # Check LLM configuration (Gemini only)
     if not settings.GOOGLE_API_KEY:

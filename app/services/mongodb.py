@@ -25,9 +25,9 @@ class MongoDBService:
         if cls._client is None:
             cls._client = AsyncIOMotorClient(
                 settings.MONGODB_URL,
-                serverSelectionTimeoutMS=5000,  # 5 second timeout
-                connectTimeoutMS=5000,
-                socketTimeoutMS=5000,
+                serverSelectionTimeoutMS=30000,  # 30 second timeout
+                connectTimeoutMS=30000,
+                socketTimeoutMS=30000,
             )
             cls._db = cls._client[settings.MONGODB_DB_NAME]
             
