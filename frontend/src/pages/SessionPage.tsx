@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -38,7 +38,7 @@ export default function SessionPage() {
     ? ((session.current_day - 1) / session.total_days) * 100
     : 0
 
-  const handleProgressUpdate = (data: {
+  const handleProgressUpdate = (_data: {
     current_day: number
     current_topic_index: number
     is_day_complete: boolean

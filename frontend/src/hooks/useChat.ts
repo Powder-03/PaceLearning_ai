@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@clerk/clerk-react'
 import { chatService } from '@/services'
@@ -31,7 +31,6 @@ export function useChat(sessionId: string) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isStreaming, setIsStreaming] = useState(false)
   const [streamingContent, setStreamingContent] = useState('')
-  const abortControllerRef = useRef<AbortController | null>(null)
 
   // Load initial history
   const { data: historyData, isLoading: isLoadingHistory } = useChatHistory(sessionId)
