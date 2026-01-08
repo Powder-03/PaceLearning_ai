@@ -6,7 +6,9 @@ password reset, and profile management.
 """
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import HTMLResponse
 
+from app.core.config import settings
 from app.services.user_service import user_service, UserService
 from app.services.email_service import email_service, EmailService
 from app.core.auth import (
@@ -156,7 +158,201 @@ async def login(
 # =============================================================================
 
 
-@router.get("/verify-email", response_model=AuthResponse)
+def _get_verification_html(success: bool, message: str, email: str = None) -> str:
+    """Generate HTML response for email verification."""
+    frontend_url = settings.FRONTEND_URL
+    
+    if success:
+        return f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Email Verified - DocLearn</title>
+            <style>
+                * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+                body {{
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    min-height: 100vh;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 20px;
+                }}
+                .container {{
+                    background: white;
+                    border-radius: 16px;
+                    padding: 48px;
+                    max-width: 480px;
+                    width: 100%;
+                    text-align: center;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                }}
+                .icon {{
+                    width: 80px;
+                    height: 80px;
+                    background: #10B981;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin: 0 auto 24px;
+                }}
+                .icon svg {{
+                    width: 40px;
+                    height: 40px;
+                    color: white;
+                }}
+                h1 {{
+                    color: #1F2937;
+                    font-size: 28px;
+                    margin-bottom: 12px;
+                }}
+                p {{
+                    color: #6B7280;
+                    font-size: 16px;
+                    line-height: 1.6;
+                    margin-bottom: 32px;
+                }}
+                .email {{
+                    color: #4F46E5;
+                    font-weight: 600;
+                }}
+                .button {{
+                    display: inline-block;
+                    background: #4F46E5;
+                    color: white;
+                    text-decoration: none;
+                    padding: 14px 32px;
+                    border-radius: 8px;
+                    font-size: 16px;
+                    font-weight: 600;
+                    transition: background 0.2s;
+                }}
+                .button:hover {{
+                    background: #4338CA;
+                }}
+                .footer {{
+                    margin-top: 32px;
+                    font-size: 14px;
+                    color: #9CA3AF;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                </div>
+                <h1>Email Verified! ✅</h1>
+                <p>
+                    Your email <span class="email">{email or ''}</span> has been successfully verified.
+                    You now have full access to DocLearn.
+                </p>
+                <a href="{frontend_url}/login" class="button">Go to Login</a>
+                <div class="footer">
+                    <p>You can close this page and return to the app.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+    else:
+        return f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Verification Failed - DocLearn</title>
+            <style>
+                * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+                body {{
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    min-height: 100vh;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 20px;
+                }}
+                .container {{
+                    background: white;
+                    border-radius: 16px;
+                    padding: 48px;
+                    max-width: 480px;
+                    width: 100%;
+                    text-align: center;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                }}
+                .icon {{
+                    width: 80px;
+                    height: 80px;
+                    background: #EF4444;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin: 0 auto 24px;
+                }}
+                .icon svg {{
+                    width: 40px;
+                    height: 40px;
+                    color: white;
+                }}
+                h1 {{
+                    color: #1F2937;
+                    font-size: 28px;
+                    margin-bottom: 12px;
+                }}
+                p {{
+                    color: #6B7280;
+                    font-size: 16px;
+                    line-height: 1.6;
+                    margin-bottom: 32px;
+                }}
+                .error {{
+                    color: #EF4444;
+                    font-weight: 500;
+                }}
+                .button {{
+                    display: inline-block;
+                    background: #4F46E5;
+                    color: white;
+                    text-decoration: none;
+                    padding: 14px 32px;
+                    border-radius: 8px;
+                    font-size: 16px;
+                    font-weight: 600;
+                    transition: background 0.2s;
+                }}
+                .button:hover {{
+                    background: #4338CA;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </div>
+                <h1>Verification Failed ❌</h1>
+                <p class="error">{message}</p>
+                <p>The verification link may have expired or already been used. Please request a new verification email.</p>
+                <a href="{frontend_url}/login" class="button">Go to Login</a>
+            </div>
+        </body>
+        </html>
+        """
+
+
+@router.get("/verify-email", response_class=HTMLResponse)
 async def verify_email_get(
     token: str = Query(..., description="Verification token from email"),
     service: UserService = Depends(get_user_service),
@@ -167,45 +363,44 @@ async def verify_email_get(
     
     When users click the verification link in their email, the browser
     makes a GET request. This endpoint verifies the email and returns
-    a new JWT token with is_verified=true.
-    
-    Returns:
-    - AuthResponse with new JWT token on success
-    - 400 error if token is invalid or expired
+    a success HTML page.
     """
-    user = await service.verify_email(token)
-    
-    if not user:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid or expired verification token"
+    try:
+        user = await service.verify_email(token)
+        
+        if not user:
+            return HTMLResponse(
+                content=_get_verification_html(
+                    success=False,
+                    message="Invalid or expired verification token"
+                ),
+                status_code=400,
+            )
+        
+        # Send welcome email
+        await email_svc.send_welcome_email(
+            to_email=user["email"],
+            user_name=user.get("name"),
         )
-    
-    # Send welcome email
-    await email_svc.send_welcome_email(
-        to_email=user["email"],
-        user_name=user.get("name"),
-    )
-    
-    # Create new token with verified status
-    new_token = create_access_token(
-        user_id=user["user_id"],
-        email=user["email"],
-        name=user.get("name"),
-        is_verified=True,
-    )
-    
-    return AuthResponse(
-        access_token=new_token,
-        token_type="bearer",
-        user=UserResponse(
-            user_id=user["user_id"],
-            email=user["email"],
-            name=user.get("name"),
-            is_verified=True,
-            created_at=user.get("created_at"),
-        ),
-    )
+        
+        return HTMLResponse(
+            content=_get_verification_html(
+                success=True,
+                message="Email verified successfully!",
+                email=user["email"],
+            ),
+            status_code=200,
+        )
+        
+    except Exception as e:
+        logger.exception(f"Email verification error: {str(e)}")
+        return HTMLResponse(
+            content=_get_verification_html(
+                success=False,
+                message="An error occurred during verification. Please try again."
+            ),
+            status_code=500,
+        )
 
 
 @router.post("/resend-verification", response_model=MessageResponse)
