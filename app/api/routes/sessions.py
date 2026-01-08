@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from app.api.deps import (
     get_session_service, 
     get_plan_service,
-    get_current_user,
+    require_verified_user,
     AuthUser,
 )
 from app.services import SessionService, PlanService
@@ -36,7 +36,7 @@ router = APIRouter(prefix="/sessions", tags=["Sessions"])
 @router.post("", response_model=CreatePlanResponse, status_code=201)
 async def create_session(
     request: CreatePlanRequest,
-    current_user: AuthUser = Depends(get_current_user),
+    current_user: AuthUser = Depends(require_verified_user),
     plan_service: PlanService = Depends(get_plan_service),
 ):
     """
@@ -79,7 +79,7 @@ async def create_session(
 
 @router.get("", response_model=SessionListResponse)
 async def list_sessions(
-    current_user: AuthUser = Depends(get_current_user),
+    current_user: AuthUser = Depends(require_verified_user),
     mode: Optional[str] = Query(None, description="Filter by mode"),
     status: Optional[str] = Query(None, description="Filter by status"),
     limit: int = Query(20, ge=1, le=100, description="Max results"),
@@ -127,7 +127,7 @@ async def list_sessions(
 @router.get("/{session_id}", response_model=SessionResponse)
 async def get_session(
     session_id: UUID,
-    current_user: AuthUser = Depends(get_current_user),
+    current_user: AuthUser = Depends(require_verified_user),
     session_service: SessionService = Depends(get_session_service),
 ):
     """
@@ -162,7 +162,7 @@ async def get_session(
 @router.get("/{session_id}/plan", response_model=LessonPlanResponse)
 async def get_lesson_plan(
     session_id: UUID,
-    current_user: AuthUser = Depends(get_current_user),
+    current_user: AuthUser = Depends(require_verified_user),
     plan_service: PlanService = Depends(get_plan_service),
     session_service: SessionService = Depends(get_session_service),
 ):
@@ -199,7 +199,7 @@ async def get_lesson_plan(
 async def get_day_content(
     session_id: UUID,
     day: int,
-    current_user: AuthUser = Depends(get_current_user),
+    current_user: AuthUser = Depends(require_verified_user),
     plan_service: PlanService = Depends(get_plan_service),
     session_service: SessionService = Depends(get_session_service),
 ):
@@ -226,7 +226,7 @@ async def get_day_content(
 async def update_progress(
     session_id: UUID,
     request: UpdateProgressRequest,
-    current_user: AuthUser = Depends(get_current_user),
+    current_user: AuthUser = Depends(require_verified_user),
     session_service: SessionService = Depends(get_session_service),
 ):
     """
@@ -262,7 +262,7 @@ async def update_progress(
 @router.post("/{session_id}/advance-day", response_model=ProgressResponse)
 async def advance_day(
     session_id: UUID,
-    current_user: AuthUser = Depends(get_current_user),
+    current_user: AuthUser = Depends(require_verified_user),
     session_service: SessionService = Depends(get_session_service),
 ):
     """
@@ -299,7 +299,7 @@ async def advance_day(
 async def goto_day(
     session_id: UUID,
     day: int,
-    current_user: AuthUser = Depends(get_current_user),
+    current_user: AuthUser = Depends(require_verified_user),
     session_service: SessionService = Depends(get_session_service),
 ):
     """
@@ -340,7 +340,7 @@ async def goto_day(
 @router.delete("/{session_id}", status_code=204)
 async def delete_session(
     session_id: UUID,
-    current_user: AuthUser = Depends(get_current_user),
+    current_user: AuthUser = Depends(require_verified_user),
     session_service: SessionService = Depends(get_session_service),
 ):
     """

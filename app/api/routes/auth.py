@@ -6,9 +6,7 @@ password reset, and profile management.
 """
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import RedirectResponse
 
-from app.core.config import settings
 from app.services.user_service import user_service, UserService
 from app.services.email_service import email_service, EmailService
 from app.core.auth import (
@@ -158,7 +156,7 @@ async def login(
 # =============================================================================
 
 
-@router.get("/verify-email")
+@router.get("/verify-email", response_model=AuthResponse)
 async def verify_email_get(
     token: str = Query(..., description="Verification token from email"),
     service: UserService = Depends(get_user_service),
@@ -168,42 +166,46 @@ async def verify_email_get(
     Verify email address via GET request (for email link clicks).
     
     When users click the verification link in their email, the browser
-    makes a GET request. This endpoint handles that and redirects to
-    the frontend with the result.
+    makes a GET request. This endpoint verifies the email and returns
+    a new JWT token with is_verified=true.
     
-    Redirects to:
-    - `{FRONTEND_URL}/verify-email?success=true` on success
-    - `{FRONTEND_URL}/verify-email?error=invalid_token` on failure
+    Returns:
+    - AuthResponse with new JWT token on success
+    - 400 error if token is invalid or expired
     """
-    frontend_url = settings.FRONTEND_URL
+    user = await service.verify_email(token)
     
-    try:
-        user = await service.verify_email(token)
-        
-        if not user:
-            return RedirectResponse(
-                url=f"{frontend_url}/verify-email?error=invalid_token",
-                status_code=302,
-            )
-        
-        # Send welcome email
-        await email_svc.send_welcome_email(
-            to_email=user["email"],
-            user_name=user.get("name"),
+    if not user:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired verification token"
         )
-        
-        # Redirect to frontend with success
-        return RedirectResponse(
-            url=f"{frontend_url}/verify-email?success=true&email={user['email']}",
-            status_code=302,
-        )
-        
-    except Exception as e:
-        logger.exception(f"Email verification error: {str(e)}")
-        return RedirectResponse(
-            url=f"{frontend_url}/verify-email?error=server_error",
-            status_code=302,
-        )
+    
+    # Send welcome email
+    await email_svc.send_welcome_email(
+        to_email=user["email"],
+        user_name=user.get("name"),
+    )
+    
+    # Create new token with verified status
+    new_token = create_access_token(
+        user_id=user["user_id"],
+        email=user["email"],
+        name=user.get("name"),
+        is_verified=True,
+    )
+    
+    return AuthResponse(
+        access_token=new_token,
+        token_type="bearer",
+        user=UserResponse(
+            user_id=user["user_id"],
+            email=user["email"],
+            name=user.get("name"),
+            is_verified=True,
+            created_at=user.get("created_at"),
+        ),
+    )
 
 
 @router.post("/resend-verification", response_model=MessageResponse)

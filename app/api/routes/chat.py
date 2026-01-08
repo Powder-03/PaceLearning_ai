@@ -21,7 +21,7 @@ from sse_starlette.sse import EventSourceResponse
 from app.api.deps import (
     get_chat_service, 
     get_session_service,
-    get_current_user,
+    require_verified_user,
     AuthUser,
 )
 from app.services import ChatService, SessionService
@@ -62,7 +62,7 @@ async def _verify_session_ownership(
 @router.post("", response_model=ChatResponse)
 async def send_message(
     request: ChatRequest,
-    current_user: AuthUser = Depends(get_current_user),
+    current_user: AuthUser = Depends(require_verified_user),
     chat_service: ChatService = Depends(get_chat_service),
     session_service: SessionService = Depends(get_session_service),
 ):
@@ -120,7 +120,7 @@ async def send_message(
 @router.post("/stream")
 async def send_message_stream(
     request: ChatRequest,
-    current_user: AuthUser = Depends(get_current_user),
+    current_user: AuthUser = Depends(require_verified_user),
     chat_service: ChatService = Depends(get_chat_service),
     session_service: SessionService = Depends(get_session_service),
 ):
@@ -215,7 +215,7 @@ async def send_message_stream(
 @router.post("/start-lesson", response_model=StartLessonResponse)
 async def start_lesson(
     request: StartLessonRequest,
-    current_user: AuthUser = Depends(get_current_user),
+    current_user: AuthUser = Depends(require_verified_user),
     chat_service: ChatService = Depends(get_chat_service),
     session_service: SessionService = Depends(get_session_service),
 ):
@@ -258,7 +258,7 @@ async def start_lesson(
 async def get_chat_history(
     session_id: UUID,
     limit: int = 100,
-    current_user: AuthUser = Depends(get_current_user),
+    current_user: AuthUser = Depends(require_verified_user),
     chat_service: ChatService = Depends(get_chat_service),
     session_service: SessionService = Depends(get_session_service),
 ):
