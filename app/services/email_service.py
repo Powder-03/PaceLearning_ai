@@ -259,7 +259,7 @@ If you didn't create an account, you can safely ignore this email.
                 <p class="warning">⚠️ This link will expire in {settings.PASSWORD_RESET_EXPIRY_HOURS} hour(s).</p>
                 <div class="footer">
                     <p>If you didn't request a password reset, please ignore this email or contact support if you're concerned.</p>
-                    <p>— The DocLearn Team</p>
+                    <p>—  DocLearn Team</p>
                 </div>
             </div>
         </body>
