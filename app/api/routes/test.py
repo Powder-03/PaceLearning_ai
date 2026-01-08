@@ -2,14 +2,14 @@
 Diagnostic Test Routes.
 
 Simple endpoints to test connectivity without app dependencies.
-Tests: MongoDB and Gemini API (PostgreSQL removed).
+Tests: MongoDB, Gemini API, and Email Service.
 """
 import logging
 from datetime import datetime
 from typing import Dict, Any
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 import google.generativeai as genai
 
 from app.services.mongodb import MongoDBService
@@ -23,6 +23,11 @@ router = APIRouter(prefix="/test", tags=["Test"])
 class TestMessage(BaseModel):
     """Test message model."""
     message: str
+
+
+class TestEmailRequest(BaseModel):
+    """Test email request model."""
+    to_email: EmailStr
 
 
 @router.post("/mongodb")
@@ -226,3 +231,188 @@ async def test_gemini_api(data: TestMessage) -> Dict[str, Any]:
                 "error_type": type(e).__name__
             }
         )
+
+
+# =============================================================================
+# Email Service Tests
+# =============================================================================
+
+@router.get("/email/status")
+async def email_status() -> Dict[str, Any]:
+    """
+    Check email service configuration status.
+    
+    Shows which settings are configured without revealing secrets.
+    """
+    from app.services.email_service import email_service
+    
+    logger.info("=== EMAIL STATUS CHECK ===")
+    logger.info(f"SMTP_HOST: {settings.SMTP_HOST}")
+    logger.info(f"SMTP_PORT: {settings.SMTP_PORT}")
+    logger.info(f"SMTP_USER configured: {bool(settings.SMTP_USER)}")
+    logger.info(f"SMTP_PASSWORD configured: {bool(settings.SMTP_PASSWORD)}")
+    logger.info(f"EMAIL_FROM_ADDRESS: {settings.EMAIL_FROM_ADDRESS}")
+    logger.info(f"FRONTEND_URL: {settings.FRONTEND_URL}")
+    
+    smtp_user_preview = None
+    if settings.SMTP_USER:
+        smtp_user_preview = f"{settings.SMTP_USER[:5]}***@{settings.SMTP_USER.split('@')[1] if '@' in settings.SMTP_USER else '***'}"
+    
+    return {
+        "status": "configured" if email_service._is_configured() else "not_configured",
+        "smtp_host": settings.SMTP_HOST,
+        "smtp_port": settings.SMTP_PORT,
+        "smtp_user_preview": smtp_user_preview,
+        "smtp_user_set": bool(settings.SMTP_USER),
+        "smtp_password_set": bool(settings.SMTP_PASSWORD),
+        "smtp_password_length": len(settings.SMTP_PASSWORD) if settings.SMTP_PASSWORD else 0,
+        "email_from_address": settings.EMAIL_FROM_ADDRESS,
+        "frontend_url": settings.FRONTEND_URL,
+        "is_configured": email_service._is_configured(),
+    }
+
+
+@router.post("/email/send")
+async def test_send_email(request: TestEmailRequest) -> Dict[str, Any]:
+    """
+    Test sending an actual email.
+    
+    Sends a test email to verify SMTP configuration works end-to-end.
+    """
+    from app.services.email_service import email_service
+    
+    logger.info("=== EMAIL SEND TEST ===")
+    logger.info(f"Attempting to send test email to: {request.to_email}")
+    logger.info(f"Email service configured: {email_service._is_configured()}")
+    
+    if not email_service._is_configured():
+        logger.error("Email service is NOT configured!")
+        logger.error(f"  SMTP_HOST: {settings.SMTP_HOST}")
+        logger.error(f"  SMTP_PORT: {settings.SMTP_PORT}")
+        logger.error(f"  SMTP_USER set: {bool(settings.SMTP_USER)}")
+        logger.error(f"  SMTP_PASSWORD set: {bool(settings.SMTP_PASSWORD)}")
+        logger.error(f"  EMAIL_FROM_ADDRESS: {settings.EMAIL_FROM_ADDRESS}")
+        
+        return {
+            "status": "not_configured",
+            "success": False,
+            "message": "Email service is not configured. Check SMTP secrets.",
+            "config": {
+                "smtp_host": settings.SMTP_HOST,
+                "smtp_port": settings.SMTP_PORT,
+                "smtp_user_set": bool(settings.SMTP_USER),
+                "smtp_password_set": bool(settings.SMTP_PASSWORD),
+            }
+        }
+    
+    try:
+        logger.info("Calling email_service.send_email()...")
+        
+        success = await email_service.send_email(
+            to_email=request.to_email,
+            subject="🧪 DocLearn Email Test",
+            html_content=f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                    .header {{ background: #4F46E5; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }}
+                    .content {{ background: #f9f9f9; padding: 20px; border-radius: 0 0 8px 8px; }}
+                    .success {{ color: #10B981; font-size: 24px; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>🎓 DocLearn</h1>
+                    </div>
+                    <div class="content">
+                        <p class="success">✅ Email Test Successful!</p>
+                        <p>This is a test email from DocLearn.</p>
+                        <p>If you received this, your email configuration is working correctly!</p>
+                        <hr>
+                        <p><small>Sent at: {datetime.utcnow().isoformat()}</small></p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """,
+            text_content="DocLearn Email Test - If you received this, your email configuration is working!",
+        )
+        
+        logger.info(f"Email send result: {success}")
+        
+        if success:
+            return {
+                "status": "success",
+                "success": True,
+                "message": f"Email sent successfully to {request.to_email}",
+                "sent_to": request.to_email,
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+        else:
+            return {
+                "status": "failed",
+                "success": False,
+                "message": "Email send returned False. Check Cloud Run logs for details.",
+                "sent_to": request.to_email,
+            }
+            
+    except Exception as e:
+        logger.exception(f"Email send test failed: {str(e)}")
+        return {
+            "status": "error",
+            "success": False,
+            "error": str(e),
+            "error_type": type(e).__name__,
+        }
+
+
+@router.post("/email/verification")
+async def test_verification_email(request: TestEmailRequest) -> Dict[str, Any]:
+    """
+    Test sending a verification email (same format as registration).
+    """
+    from app.services.email_service import email_service
+    
+    logger.info("=== VERIFICATION EMAIL TEST ===")
+    logger.info(f"Sending verification email to: {request.to_email}")
+    
+    if not email_service._is_configured():
+        return {
+            "status": "not_configured",
+            "success": False,
+            "message": "Email service is not configured",
+        }
+    
+    try:
+        # Use a fake token for testing
+        test_token = "test-token-abc123xyz"
+        
+        success = await email_service.send_verification_email(
+            to_email=request.to_email,
+            user_name="Test User",
+            verification_token=test_token,
+        )
+        
+        logger.info(f"Verification email send result: {success}")
+        
+        return {
+            "status": "success" if success else "failed",
+            "success": success,
+            "message": f"Verification email {'sent' if success else 'failed'} to {request.to_email}",
+            "sent_to": request.to_email,
+            "test_token": test_token,
+            "verification_url": f"{settings.FRONTEND_URL}/verify-email?token={test_token}",
+        }
+        
+    except Exception as e:
+        logger.exception(f"Verification email test failed: {str(e)}")
+        return {
+            "status": "error",
+            "success": False,
+            "error": str(e),
+            "error_type": type(e).__name__,
+        }

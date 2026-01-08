@@ -28,14 +28,40 @@ class EmailService:
         self.from_name = settings.EMAIL_FROM_NAME
         self.from_address = settings.EMAIL_FROM_ADDRESS or settings.SMTP_USER
         self.frontend_url = settings.FRONTEND_URL
+        
+        # Log configuration on init
+        logger.info("=== EmailService Initialized ===")
+        logger.info(f"  SMTP Host: {self.smtp_host}")
+        logger.info(f"  SMTP Port: {self.smtp_port}")
+        logger.info(f"  SMTP User: {self.smtp_user[:5] + '***' if self.smtp_user else 'NOT SET'}")
+        logger.info(f"  SMTP Password: {'SET (' + str(len(self.smtp_password)) + ' chars)' if self.smtp_password else 'NOT SET'}")
+        logger.info(f"  From Address: {self.from_address}")
+        logger.info(f"  Frontend URL: {self.frontend_url}")
+        logger.info(f"  Is Configured: {self._is_configured()}")
     
     def _is_configured(self) -> bool:
         """Check if email service is properly configured."""
-        return all([
+        configured = all([
             self.smtp_user,
             self.smtp_password,
             self.from_address,
         ])
+        return configured
+    
+    def get_config_status(self) -> dict:
+        """Return email configuration status for debugging."""
+        return {
+            "smtp_host": self.smtp_host,
+            "smtp_port": self.smtp_port,
+            "smtp_user_set": bool(self.smtp_user),
+            "smtp_user_preview": self.smtp_user[:5] + "***" if self.smtp_user else None,
+            "smtp_password_set": bool(self.smtp_password),
+            "smtp_password_length": len(self.smtp_password) if self.smtp_password else 0,
+            "from_name": self.from_name,
+            "from_address": self.from_address,
+            "frontend_url": self.frontend_url,
+            "is_configured": self._is_configured(),
+        }
     
     async def send_email(
         self,
@@ -56,8 +82,18 @@ class EmailService:
         Returns:
             True if sent successfully, False otherwise
         """
+        logger.info(f"=== send_email called ===")
+        logger.info(f"  To: {to_email}")
+        logger.info(f"  Subject: {subject}")
+        logger.info(f"  Is configured: {self._is_configured()}")
+        
         if not self._is_configured():
             logger.warning("Email service not configured - skipping email send")
+            logger.warning(f"  SMTP_HOST: {self.smtp_host}")
+            logger.warning(f"  SMTP_PORT: {self.smtp_port}")
+            logger.warning(f"  SMTP_USER set: {bool(self.smtp_user)}")
+            logger.warning(f"  SMTP_PASSWORD set: {bool(self.smtp_password)}")
+            logger.warning(f"  FROM_ADDRESS: {self.from_address}")
             # In development, log the email content
             if settings.ENV == "development":
                 logger.info(f"[DEV] Would send email to {to_email}:")
@@ -77,15 +113,31 @@ class EmailService:
                 msg.attach(MIMEText(text_content, "plain"))
             msg.attach(MIMEText(html_content, "html"))
             
-            # Send via SMTP
-            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
-                server.starttls()
-                server.login(self.smtp_user, self.smtp_password)
-                server.sendmail(self.from_address, to_email, msg.as_string())
+            logger.info(f"Connecting to SMTP server {self.smtp_host}:{self.smtp_port}...")
             
-            logger.info(f"Email sent successfully to {to_email}")
+            # Send via SMTP
+            with smtplib.SMTP(self.smtp_host, self.smtp_port, timeout=30) as server:
+                logger.info("  Connected. Starting TLS...")
+                server.starttls()
+                logger.info(f"  TLS started. Logging in as {self.smtp_user[:5]}***...")
+                server.login(self.smtp_user, self.smtp_password)
+                logger.info("  Logged in. Sending email...")
+                server.sendmail(self.from_address, to_email, msg.as_string())
+                logger.info("  Email sent!")
+            
+            logger.info(f"✓ Email sent successfully to {to_email}")
             return True
             
+        except smtplib.SMTPAuthenticationError as e:
+            logger.error(f"SMTP Authentication FAILED: {str(e)}")
+            logger.error("  Make sure you're using a Gmail App Password, not your regular password!")
+            return False
+        except smtplib.SMTPRecipientsRefused as e:
+            logger.error(f"Recipient refused: {to_email} - {str(e)}")
+            return False
+        except smtplib.SMTPException as e:
+            logger.error(f"SMTP error: {str(e)}")
+            return False
         except Exception as e:
             logger.exception(f"Failed to send email to {to_email}: {str(e)}")
             return False
