@@ -5,7 +5,7 @@ API endpoints for user registration, login, email verification,
 password reset, and profile management.
 """
 import logging
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import HTMLResponse
 
 from app.core.config import settings
@@ -53,7 +53,6 @@ def get_email_service() -> EmailService:
 @router.post("/register", response_model=AuthResponse, status_code=201)
 async def register(
     request: RegisterRequest,
-    response: Response,
     service: UserService = Depends(get_user_service),
     email_svc: EmailService = Depends(get_email_service),
 ):
@@ -67,6 +66,10 @@ async def register(
     - `email`: Valid email address
     - `password`: Password (min 6 characters)
     - `name`: Optional display name
+    
+    **Returns:**
+    - `access_token`: JWT token (use as Bearer token in Authorization header)
+    - `user`: User information
     """
     try:
         # Create user
@@ -92,16 +95,6 @@ async def register(
             is_verified=False,
         )
         
-        # Set HTTP-only cookie
-        response.set_cookie(
-            key="access_token",
-            value=token,
-            httponly=True,
-            secure=settings.ENV == "production",
-            samesite="lax",
-            max_age=settings.JWT_EXPIRATION_HOURS * 3600,
-        )
-        
         return AuthResponse(
             access_token=token,
             token_type="bearer",
@@ -124,7 +117,6 @@ async def register(
 @router.post("/login", response_model=AuthResponse)
 async def login(
     request: LoginRequest,
-    response: Response,
     service: UserService = Depends(get_user_service),
 ):
     """
@@ -132,6 +124,10 @@ async def login(
     
     Returns an access token on successful authentication.
     Note: Unverified users can log in but will have limited access.
+    
+    **Returns:**
+    - `access_token`: JWT token (use as Bearer token in Authorization header)
+    - `user`: User information
     """
     user = await service.authenticate(
         email=request.email,
@@ -150,16 +146,6 @@ async def login(
         email=user["email"],
         name=user.get("name"),
         is_verified=user.get("is_verified", False),
-    )
-    
-    # Set HTTP-only cookie
-    response.set_cookie(
-        key="access_token",
-        value=token,
-        httponly=True,
-        secure=settings.ENV == "production",
-        samesite="lax",
-        max_age=settings.JWT_EXPIRATION_HOURS * 3600,
     )
     
     return AuthResponse(
@@ -612,7 +598,6 @@ async def change_password(
 
 @router.post("/refresh", response_model=AuthResponse)
 async def refresh_token(
-    response: Response,
     current_user: AuthUser = Depends(get_current_user),
     service: UserService = Depends(get_user_service),
 ):
@@ -620,7 +605,11 @@ async def refresh_token(
     Refresh the access token.
     
     Returns a new access token with extended expiry.
-    Requires a valid (non-expired) current token.
+    Requires a valid (non-expired) current token in Authorization header.
+    
+    **Returns:**
+    - `access_token`: New JWT token
+    - `user`: User information
     """
     # Verify user still exists in database
     user = await service.get_user_by_id(current_user.user_id)
@@ -633,16 +622,6 @@ async def refresh_token(
         email=user["email"],
         name=user.get("name"),
         is_verified=user.get("is_verified", False),
-    )
-    
-    # Update HTTP-only cookie
-    response.set_cookie(
-        key="access_token",
-        value=new_token,
-        httponly=True,
-        secure=settings.ENV == "production",
-        samesite="lax",
-        max_age=settings.JWT_EXPIRATION_HOURS * 3600,
     )
     
     return AuthResponse(
@@ -679,23 +658,14 @@ async def verify_token_endpoint(
 
 @router.post("/logout", response_model=MessageResponse)
 async def logout(
-    response: Response,
     current_user: AuthUser = Depends(get_current_user),
 ):
     """
     Logout current user.
     
-    Clears the HTTP-only cookie.
-    Note: Since we use stateless JWT, this mainly clears the client-side cookie.
+    Since we use stateless JWT, the frontend should discard the token.
+    This endpoint confirms logout and can be used for logging purposes.
     """
-    # Clear the cookie
-    response.delete_cookie(
-        key="access_token",
-        httponly=True,
-        secure=settings.ENV == "production",
-        samesite="lax",
-    )
-    
     logger.info(f"User {current_user.user_id} logged out")
     return MessageResponse(message="Successfully logged out")
 

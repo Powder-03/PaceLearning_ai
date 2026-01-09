@@ -117,24 +117,34 @@ This service provides:
         redoc_url="/redoc",
     )
     
-    # Add CORS middleware - allow specific origins with credentials
+    # Add CORS middleware
     allowed_origins = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:5174",
         "http://127.0.0.1:5174",
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
     ]
     
+    # Add production frontend URL
     if settings.FRONTEND_URL:
         allowed_origins.append(settings.FRONTEND_URL)
+        if settings.FRONTEND_URL.endswith("/"):
+            allowed_origins.append(settings.FRONTEND_URL.rstrip("/"))
+        else:
+            allowed_origins.append(settings.FRONTEND_URL + "/")
+    
+    log.info(f"CORS allowed origins: {allowed_origins}")
     
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=allowed_origins,  # Specific origins, NOT ["*"]
-        allow_credentials=True,          # Required for cookies
+        allow_origins=allowed_origins,
+        allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
-        expose_headers=["Set-Cookie"],   # Allow frontend to see Set-Cookie
     )
     
     # Include routers

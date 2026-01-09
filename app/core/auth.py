@@ -113,29 +113,24 @@ async def verify_token(
     Verify JWT and extract user information.
     
     This is a FastAPI dependency that:
-    1. Extracts the Bearer token from Authorization header OR cookie
+    1. Extracts the Bearer token from Authorization header
     2. Verifies the JWT signature
     3. Validates token claims (expiry, etc.)
     4. Returns an AuthUser object with user details
     
-    Priority:
-    1. Authorization header (Bearer token)
-    2. HTTP-only cookie
+    Usage:
+        Add `Authorization: Bearer <token>` header to requests
     """
     token = None
     
-    # Try Authorization header first
+    # Get token from Authorization header
     if credentials:
         token = credentials.credentials
-    
-    # Fall back to cookie if no header
-    if not token:
-        token = request.cookies.get("access_token")
     
     if not token:
         raise HTTPException(
             status_code=401,
-            detail="Not authenticated"
+            detail="Not authenticated. Please provide a valid Bearer token."
         )
     
     try:
@@ -175,15 +170,11 @@ async def get_optional_user(
 ) -> Optional[AuthUser]:
     """
     Optional authentication - returns None if no token provided.
-    Checks both Authorization header and cookie.
     """
     token = None
     
     if credentials:
         token = credentials.credentials
-    
-    if not token:
-        token = request.cookies.get("access_token")
     
     if not token:
         return None
