@@ -117,10 +117,13 @@ This service provides:
         redoc_url="/redoc",
     )
     
-    # Add CORS middleware - allow all origins
+    # Add CORS middleware - allow specific origins with credentials
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=[
+            "http://localhost:5173",
+            "http://localhost:5174",
+        ],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
