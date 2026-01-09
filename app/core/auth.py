@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from dataclasses import dataclass
 
-from fastapi import HTTPException, Security
+from fastapi import HTTPException, Security, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import jwt
 
@@ -104,18 +104,39 @@ def decode_token(token: str) -> dict:
 
 
 async def verify_token(
-    credentials: HTTPAuthorizationCredentials = Security(security),
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Security(
+        HTTPBearer(auto_error=False)
+    ),
 ) -> AuthUser:
     """
     Verify JWT and extract user information.
     
     This is a FastAPI dependency that:
-    1. Extracts the Bearer token from Authorization header
+    1. Extracts the Bearer token from Authorization header OR cookie
     2. Verifies the JWT signature
     3. Validates token claims (expiry, etc.)
     4. Returns an AuthUser object with user details
+    
+    Priority:
+    1. Authorization header (Bearer token)
+    2. HTTP-only cookie
     """
-    token = credentials.credentials
+    token = None
+    
+    # Try Authorization header first
+    if credentials:
+        token = credentials.credentials
+    
+    # Fall back to cookie if no header
+    if not token:
+        token = request.cookies.get("access_token")
+    
+    if not token:
+        raise HTTPException(
+            status_code=401,
+            detail="Not authenticated"
+        )
     
     try:
         payload = decode_token(token)
@@ -147,29 +168,42 @@ async def verify_token(
 
 
 async def get_optional_user(
+    request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Security(
         HTTPBearer(auto_error=False)
     ),
 ) -> Optional[AuthUser]:
     """
     Optional authentication - returns None if no token provided.
+    Checks both Authorization header and cookie.
     """
-    if credentials is None:
+    token = None
+    
+    if credentials:
+        token = credentials.credentials
+    
+    if not token:
+        token = request.cookies.get("access_token")
+    
+    if not token:
         return None
     
     try:
-        return await verify_token(credentials)
+        return await verify_token(request, credentials)
     except HTTPException:
         return None
 
 
 async def require_verified_user(
-    credentials: HTTPAuthorizationCredentials = Security(security),
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Security(
+        HTTPBearer(auto_error=False)
+    ),
 ) -> AuthUser:
     """
     Require a verified user - raises 403 if email not verified.
     """
-    user = await verify_token(credentials)
+    user = await verify_token(request, credentials)
     
     if not user.is_verified:
         raise HTTPException(
