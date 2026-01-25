@@ -1,0 +1,682 @@
+1. Landing page 
+
+Design a minimal dark landing page for "DocLearn" AI learning platform. 1440x900 resolution.
+
+HEADER (sticky top, full width, bg #0f0a1a):
+- Left: "DocLearn" text logo in white
+- Center: Navigation links "Features", "Pricing" in gray (#9ca3af)
+- Right: "Login" text link gray, "Sign Up" button purple bg (#8b5cf6) white text
+
+HERO SECTION (centered):
+- Large heading: "Learn Anything, Your Way" white bold
+- Subtext: "AI-powered personalized learning with multiple modes" gray
+- Two buttons side by side: "Get Started" purple filled, "Learn More" outlined purple
+
+MODES SECTION:
+- Heading: "Choose How You Learn"
+- 4 cards in row, equal width:
+  Card 1: "AI Tutor" - purple left border, "Personalized AI lesson plans", small "AVAILABLE" green badge
+  Card 2: "Document Chat" - grayed out (opacity 0.5), "Chat with PDFs and docs", "COMING SOON" gray badge
+  Card 3: "Video Learning" - grayed out, "Learn from video content", "COMING SOON" badge
+  Card 4: "YouTube Tutor" - grayed out, "Chat with YouTube videos", "COMING SOON" badge
+
+FOOTER: Simple links row, copyright text centered
+
+Style: Dark mode, #0f0a1a background, minimal, no illustrations, clean typography, generous whitespace.
+
+
+
+
+
+
+
+
+
+//////////////////////////////////////////////////////////
+LOGIN_PAGE
+////////////////////////////////////////////////////////////
+
+
+
+Design a minimal dark login page for "DocLearn". 1440x900 resolution.
+
+LAYOUT: Centered single card (400px width) on dark background #0f0a1a
+
+CARD CONTENT (bg #1a1425, 24px padding, 8px radius):
+- Top: "DocLearn" text logo centered, white
+- Spacing 24px
+- Heading: "Sign in" white, 24px bold
+- Subtext: "Welcome back" gray small
+- Spacing 24px
+- Form:
+  - Label "Email" gray small above
+  - Input field: dark bg #0f0a1a, 1px border #2d2640, placeholder "Enter your email", full width
+  - Spacing 16px
+  - Label "Password" gray small above
+  - Input field: same style, placeholder "Enter your password", eye icon on right for toggle
+  - Spacing 8px
+  - Row: Left "Remember me" checkbox with label, Right "Forgot password?" purple link
+  - Spacing 24px
+  - Button "Sign in" full width, purple bg #8b5cf6, white text, 12px padding
+  - Spacing 16px
+  - Divider: thin line with "or" text in center gray
+  - Spacing 16px
+  - Button "Continue with Google" full width, outlined (1px border #2d2640), Google icon left
+  - Spacing 24px
+  - Text centered: "New to DocLearn?" gray + "Create account" purple link
+
+No illustrations, minimal dark UI, clean form design.
+
+
+
+
+///////////////////////////////////////////////////////////////
+Register page
+///////////////////////////////////////////////////////////////
+Design a minimal dark registration page for "DocLearn". 1440x900 resolution.
+
+LAYOUT: Centered card (400px width) on dark background #0f0a1a
+
+CARD CONTENT (bg #1a1425, 24px padding, 8px radius):
+- "DocLearn" text logo centered
+- Heading: "Create account" white bold
+- Subtext: "Start your learning journey" gray
+- Form fields (each with label above, dark input bg):
+  - "Name" input (with "optional" gray badge next to label)
+  - "Email" input
+  - "Password" input with eye toggle icon
+  - Password strength bar below (4 segments, showing "medium" state - 2 filled purple)
+  - Small text: "At least 8 characters" gray
+- Checkbox row: "I agree to Terms of Service and Privacy Policy" (links in purple)
+- "Create account" button full width purple
+- Divider "or"
+- "Continue with Google" button outlined
+- Bottom text: "Already have an account? Sign in" (Sign in is purple link)
+
+Dark mode minimal UI, no images, clean form.
+
+
+////////////////////////////////////////////////////////////////////////////////
+FORGOT PASSWORD PAGE
+
+////////////////////////////////////////////////////////////////////////////////
+
+Design a minimal forgot password page for "DocLearn". 1440x900 resolution.
+
+LAYOUT: Centered card (380px width) on dark background #0f0a1a
+
+CARD CONTENT:
+- Top left: "← Back to login" gray link with arrow
+- Spacing 32px
+- Heading centered: "Forgot password?" white bold
+- Subtext centered: "Enter your email and we'll send you a reset link" gray
+- Spacing 24px
+- "Email" label and input field (dark bg, full width)
+- Spacing 24px
+- "Send reset link" button full width purple
+- Spacing 16px
+- Text centered: "Remember your password? Sign in" (Sign in purple link)
+
+Minimal dark UI, single focused action, no decorations.
+
+
+
+////////////////////////////////////////////////////////////////////////////
+RESET PASSWORD PAGE
+////////////////////////////////////////////////////////////////////////////
+
+Design a minimal password reset page for "DocLearn". 1440x900 resolution.
+
+LAYOUT: Centered card (400px width) on dark background #0f0a1a
+
+CARD CONTENT:
+- Heading: "Set new password" white bold centered
+- Subtext: "Create a strong password for your account" gray centered
+- Spacing 24px
+- "New password" input with eye toggle
+- Password strength bar (4 segments with color: red weak, yellow medium, green strong)
+- Spacing 16px
+- "Confirm password" input with eye toggle
+- Spacing 16px
+- Requirements checklist:
+  - "✓ At least 8 characters" (green checkmark if met, gray circle if not)
+  - "✓ One uppercase letter"
+  - "○ One number"
+- Spacing 24px
+- "Reset password" button full width purple
+- Spacing 16px
+- "Back to login" link centered gray
+
+Dark minimal UI, validation states visible.
+
+
+
+////////////////////////////////////////////////////////////////////////////
+Email VERIFICATION PAGE
+/////////////////////////////////////////////////////////////////////////////
+Design a minimal email verification pending page for "DocLearn". 1440x900 resolution.
+
+LAYOUT: Centered content on dark background #0f0a1a (no card needed)
+
+CONTENT (centered vertically and horizontally):
+- Mail icon: Simple line icon, 64px, purple color
+- Spacing 24px
+- Heading: "Check your email" white bold 28px
+- Spacing 12px
+- Text: "We sent a verification link to" gray
+- Email: "user@example.com" purple color, medium weight
+- Spacing 32px
+- Button: "Resend verification email" outlined purple (not filled)
+- Spacing 16px
+- Small text: "Didn't receive it? Check your spam folder" gray
+- Spacing 24px
+- Link: "← Back to login" gray
+
+Minimal centered layout, simple mail icon only, no illustrations.
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+DASHBOARD WITH MODE selection
+//////////////////////////////////////////////////////////////////////////////
+
+
+
+Design a minimal dashboard for "DocLearn" with learning mode selection. 1440x900 resolution.
+
+LAYOUT: Left sidebar (240px) + Main content area
+
+SIDEBAR (bg #1a1425, full height):
+- Top: "DocLearn" logo text, white, padding 24px
+- Divider line #2d2640
+- Section label: "LEARN" gray uppercase 11px
+- Nav item active: "Dashboard" with home icon, purple bg tint, purple left border 3px, white text
+- Nav item: "My Sessions" with folder icon, gray text
+- Spacing 24px
+- Section label: "MODES" gray uppercase 11px
+- Nav item: "AI Tutor" with sparkle icon, green dot indicator (available)
+- Nav item: "Document Chat" gray text, small "SOON" badge gray
+- Nav item: "Video Learning" gray text, "SOON" badge
+- Nav item: "YouTube Tutor" gray text, "SOON" badge
+- Bottom section (fixed):
+- Divider
+- "Settings" with gear icon, gray
+- Divider
+- User: "john@example.com" truncated, small avatar circle with initials "JD"
+- "Logout" link gray
+
+MAIN CONTENT (bg #0f0a1a):
+- Header row: "Welcome back, John 👋" left, notification bell icon + user avatar right
+- Spacing 32px
+- Section: "Choose Learning Mode"
+- 4 cards in 2x2 grid (each card bg #1a1425, 1px border #2d2640, 16px padding):
+
+  Card 1 - AI Tutor (active):
+  - Small purple badge "AVAILABLE" top right
+  - Icon: Sparkle/brain line icon
+  - Title: "AI Tutor" white bold
+  - Desc: "Personalized AI-generated learning plans" gray
+  - Button: "Create Session" purple small button
+  - Small stat: "3 active sessions" gray
+
+  Card 2 - Document Chat (disabled):
+  - Opacity 0.5 on entire card
+  - Gray badge "COMING SOON" top right
+  - Document icon gray
+  - Title: "Document Chat" 
+  - Desc: "Upload PDFs and chat with your materials"
+  - Link: "Notify me" underlined gray small
+
+  Card 3 - Video Learning (disabled):
+  - Same disabled style
+  - Video icon
+  - "Upload videos and learn interactively"
+  
+  Card 4 - YouTube Tutor (disabled):
+  - Same disabled style
+  - Play icon
+  - "Learn from any YouTube video"
+
+- Spacing 32px
+- Section: "Recent Sessions" heading with "View all →" link right
+- 2 session cards horizontal:
+  - Each shows: Purple "AI" badge, topic title, progress bar, "Day 3/7", "Continue →" link
+
+Dark mode, consistent sidebar navigation, clear mode states.
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+SESSION LIST PAGE
+////////////////////////////////////////////////////////////////////////////////
+
+Design a minimal sessions list page for "DocLearn". 1440x900 resolution.
+
+LAYOUT: Left sidebar (240px, same as dashboard) + Main content
+
+SIDEBAR: Same as dashboard but "My Sessions" is now active (purple highlight), "Dashboard" is gray
+
+MAIN CONTENT:
+- Header row: "My Sessions" title left side, right side has: Filter dropdown "All Modes ▼", "+ New Session" purple button
+- Spacing 16px
+- Tab bar: "All" (active, purple underline) | "Active" | "Completed" - tabs in gray, active in white with purple underline
+- Spacing 24px
+- Sessions grid (2 columns):
+
+  SESSION CARD (bg #1a1425, border #2d2640, 16px padding, 8px radius):
+  - Top row: Mode badge "AI TUTOR" purple small pill left, three-dot menu icon right
+  - Title: "Machine Learning Basics" white bold 16px
+  - Progress section:
+    - "Day 3 of 7" gray text
+    - Progress bar (thin, purple fill 42%, gray track)
+    - "42%" right aligned
+  - Bottom row: Status badge "IN PROGRESS" (purple bg tint, purple text), spacer, "1 hr/day" gray, "Continue →" purple link
+
+  More session cards in grid...
+
+  Empty area message (if no sessions): "No sessions found" with "Create your first session" button
+
+FOOTER AREA: Pagination or "Load more" if needed
+
+Consistent sidebar, clear session cards with all info visible.
+
+
+///////////////////////////////////////////////////////////////////////////////////
+CREATE SESSION MODE selection
+//////////////////////////////////////////////////////////////////////////////////
+Design a minimal create session page with mode selection for "DocLearn". 1440x900 resolution.
+
+LAYOUT: Left sidebar (same navigation) + Main content centered
+
+SIDEBAR: "My Sessions" active, rest same
+
+MAIN CONTENT (centered, max-width 600px):
+- Back link: "← Back to sessions" gray, top left of content
+- Spacing 24px
+- Heading: "Create Learning Session" white bold 24px centered
+- Subtext: "Choose how you want to learn" gray centered
+- Spacing 32px
+
+- Mode selection cards (vertical stack, full width each):
+
+  CARD 1 - AI Tutor (selectable, selected state):
+  - Border: 2px purple (selected indicator)
+  - Left: Radio button filled purple
+  - Content: "AI Tutor" bold white, "Get a personalized learning plan generated by AI" gray below
+  - Right: Green "AVAILABLE" badge
+
+  CARD 2 - Document Chat (disabled):
+  - Opacity 0.5
+  - Border: 1px gray #2d2640
+  - Left: Radio button disabled gray
+  - Content: "Document Chat" gray, "Upload PDFs and chat with your materials" gray
+  - Right: "COMING SOON" gray badge
+  - Cursor: not-allowed feel
+
+  CARD 3 - Video Learning (disabled):
+  - Same disabled style
+  - "Video Learning", "Upload videos for interactive learning"
+
+  CARD 4 - YouTube Tutor (disabled):
+  - Same disabled style
+  - "YouTube Tutor", "Learn from any YouTube video"
+
+- Spacing 32px
+- Button row: "Cancel" gray text link, "Continue" purple button (only enabled if mode selected)
+
+Clear mode selection, disabled states obvious, navigation present.
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////
+CREATE SESSION _AI TUTOR Form
+
+//////////////////////////////////////////////////////////////////////
+Design the AI Tutor session creation form for "DocLearn". 1440x900 resolution.
+
+LAYOUT: Left sidebar + Main content centered
+
+SIDEBAR: Same navigation, "My Sessions" active
+
+MAIN CONTENT (centered, max-width 500px):
+- Breadcrumb: "Sessions > Create > AI Tutor" gray with ">" separators, "AI Tutor" white
+- Spacing 24px
+- Heading: "Create AI Tutor Session" white bold
+- Subtext: "Our AI will generate a personalized learning plan for you" gray
+- Spacing 32px
+
+- Form card (bg #1a1425, 24px padding, 8px radius):
+  
+  - Label: "What do you want to learn?" white
+  - Large text input: Dark bg, placeholder "e.g., Machine Learning, Spanish, Guitar...", full width
+  - Spacing 24px
+  
+  - Label: "Duration" white
+  - Select dropdown: Dark bg, showing "7 days" with chevron down icon
+  - Small text: "How many days for your learning plan" gray
+  - Spacing 24px
+  
+  - Label: "Time per day" white
+  - Radio button group (horizontal):
+    - ○ 30 min
+    - ● 1 hour (selected, purple)
+    - ○ 2 hours
+    - ○ 3+ hours
+  - Spacing 24px
+  
+  - Divider line #2d2640
+  - Spacing 16px
+  
+  - Preview box (bg #0f0a1a, 12px padding, 8px radius):
+    - "📋 Your plan: 7-day personalized curriculum with 1 hour daily sessions"
+
+- Spacing 24px
+- Button row: "← Back" gray link left, "Create Plan" purple button right
+
+Clear form layout, preview of settings, proper navigation.
+
+
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+COMING SOON MODE PREVIEW(DPCOMENT /VIDEO/YOUtuBE)
+
+Design a "Coming Soon" preview page for Document Chat mode in "DocLearn". 1440x900 resolution.
+
+LAYOUT: Left sidebar + Main content centered
+
+SIDEBAR: Same navigation, "Document Chat" would be in modes section with "SOON" badge
+
+MAIN CONTENT (centered, max-width 500px):
+- Back link: "← Back to mode selection" gray top left
+- Spacing 32px
+
+- Content card (bg #1a1425, 32px padding, centered text):
+  
+  - Large "COMING SOON" badge (bg #374151, gray text, 12px padding, rounded)
+  - Spacing 24px
+  - Document icon: Simple line icon, 48px, gray color
+  - Spacing 16px
+  - Heading: "Document Chat" white bold 24px
+  - Spacing 12px
+  - Description: "Upload your study materials - PDFs, documents, or text files - and have interactive conversations with an AI that understands your content." gray, max-width 400px
+
+  - Spacing 24px
+  - Planned features list (left-aligned within centered container):
+    - "○ Upload multiple document formats" gray
+    - "○ AI extracts and indexes content" gray
+    - "○ Ask questions about your materials" gray
+    - "○ Get answers with page references" gray
+  
+  - Spacing 32px
+  - Divider line
+  - Spacing 24px
+  
+  - "Get notified when available:" gray small
+  - Spacing 12px
+  - Input + button row:
+    - Email input: 70% width, placeholder "your@email.com"
+    - "Notify Me" button: 28% width, outlined purple
+  
+  - Spacing 16px
+  - Small text: "We'll only email you when this feature launches" gray 12px
+
+Clear coming soon state, feature preview, email capture, navigation back.
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+SESSION DETAIL/LESSON PLAN VIEW
+//////////////////////////////////////////////////////////////////////////////
+Design a session detail page showing lesson plan for "DocLearn". 1440x900 resolution.
+
+LAYOUT: Left sidebar + Main content with optional right panel
+
+SIDEBAR: Same navigation, "My Sessions" active
+
+MAIN CONTENT:
+- Header section (bg #1a1425, full width, 24px padding):
+  - Row 1: "← Back to Sessions" link left
+  - Row 2: Mode badge "AI TUTOR" purple pill, "Machine Learning Basics" title large white bold
+  - Row 3: Progress bar full width (42% filled purple), "Day 3 of 7 • 42% complete" below
+  - Row 4: "Continue Learning →" purple button right aligned
+
+- Spacing 24px
+
+- Two column layout below:
+
+  LEFT COLUMN (60%):
+  - Card "About This Course" (bg #1a1425):
+    - Description text gray
+    - "Learning Outcomes:" label white
+    - Bullet list: "• Understand ML fundamentals", "• Apply supervised learning", etc.
+
+  - Spacing 16px
+  
+  - Card "Lesson Plan" (bg #1a1425):
+    - Vertical timeline:
+    
+    Day 1 (completed):
+    - Green checkmark icon
+    - "Day 1: Introduction to ML" gray text (muted)
+    - "1 hour • Completed" small gray
+    - Vertical line connecting to next
+    
+    Day 2 (completed):
+    - Same completed style
+    
+    Day 3 (current):
+    - Purple arrow icon →
+    - "Day 3: Supervised Learning" white text bold
+    - Purple left border or highlight
+    - Expanded content:
+      - "Topics: Linear Regression, Classification, Model Training" gray
+      - "Key Concepts: features, labels, training data" as tags
+    - "Start Day 3" purple button small
+    - Vertical line connecting
+    
+    Day 4-7 (upcoming):
+    - Gray circle icons
+    - "Day 4: Neural Networks" gray text (muted, opacity 0.6)
+    - "Locked" or just muted state
+
+  RIGHT COLUMN (40%, optional - can be collapsible):
+  - Card "Current Day Preview":
+    - "Day 3: Supervised Learning"
+    - Duration: "1 hour"
+    - Topics list
+    - "Begin →" button
+
+Clear navigation back, progress visible, timeline shows all days with states.
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////
+
+CHAT INTERFACE AITUTOR
+
+//////////////////////////////////////////////////////////////////////////////////////
+Design the AI Tutor chat interface for "DocLearn". 1440x900 resolution.
+
+LAYOUT: Left sidebar (narrower 200px) + Chat area + Right panel (collapsible 280px)
+
+LEFT SIDEBAR:
+- "DocLearn" logo small
+- Divider
+- "← Back to Session" link with arrow (IMPORTANT: clear navigation back)
+- Divider
+- "Days" section label
+- Day buttons vertical (clickable to switch):
+  - "Day 1 ✓" gray (completed)
+  - "Day 2 ✓" gray (completed)
+  - "Day 3" purple bg highlight, white text (current)
+  - "Day 4" gray muted
+  - "Day 5" gray muted
+  - "Day 6" gray muted
+  - "Day 7" gray muted
+- Bottom: Session topic "Machine Learning" small, settings gear icon
+
+CHAT AREA (center, flex grow):
+- Header bar (bg #1a1425, padding 16px):
+  - Left: "Day 3: Supervised Learning" white
+  - Right: "Lesson Info" toggle button (to show/hide right panel), minimize icon
+
+- Chat messages area (scrollable, padding 24px):
+  
+  AI MESSAGE (left aligned):
+  - Small "AI" label or bot icon above
+  - Message bubble: bg #1a1425, rounded (8px all, 0px bottom-left), max-width 70%
+  - Text: "Let's explore supervised learning today! 🎓 This is one of the most important concepts in ML. What do you already know about labeled data?"
+  - Timestamp small gray below
+  
+  USER MESSAGE (right aligned):
+  - Message bubble: bg gradient purple (#8b5cf6 to #6366f1), rounded (8px all, 0px bottom-right), max-width 70%
+  - Text white: "I know that labeled data is used for training models"
+  - Timestamp below
+  
+  AI MESSAGE:
+  - Longer response with formatted text
+  - "●●●" typing indicator when AI is responding (three dots pulsing)
+
+- Suggested prompts row (above input):
+  - Pill buttons: "Explain more", "Give example", "Quiz me" - outlined gray, small
+
+- Input area (bg #1a1425, padding 16px, bottom):
+  - Text input: bg #0f0a1a, placeholder "Type your message...", full width
+  - Send button: purple bg, arrow icon, right side of input
+
+RIGHT PANEL (collapsible, bg #1a1425):
+- Header: "Today's Lesson" with X close button
+- Current topic: "✓ Linear Regression" (completed, green check)
+- Current topic: "→ Classification" (current, purple arrow)
+- Upcoming: "○ Practical Examples" (gray)
+- Divider
+- "Key Concepts" label
+- Tags: "features", "labels", "training set", "test set" - small pills gray bg
+- Divider
+- "Progress" label
+- "2 of 3 topics complete"
+- Small progress bar
+
+IMPORTANT: Clear "Back to Session" navigation, day switching, panel toggle for space.
+
+
+//////////////////////////////////////////////////////////////////////////////
+SETTING PAGE
+/////////////////////////////////////////////////////////////////////////
+Design a settings page for "DocLearn". 1440x900 resolution.
+
+LAYOUT: Left sidebar + Main content
+
+SIDEBAR: Same navigation, "Settings" is now active (purple highlight)
+
+MAIN CONTENT:
+- Heading: "Settings" white bold 24px
+- Spacing 24px
+
+- Tab bar: "Profile" (active, purple underline) | "Account" | "Learning Modes" | "Notifications"
+- Spacing 32px
+
+PROFILE TAB CONTENT:
+
+- Card "Your Profile" (bg #1a1425, padding 24px):
+  - Row: "Name" label gray, "John Doe" white, "Edit" purple link right
+  - Divider
+  - Row: "Email" label gray, "john@example.com" white, green "✓ Verified" badge, no edit (emails can't change)
+  - Divider
+  - Row: "Member since" label gray, "January 2024" white
+
+- Spacing 24px
+
+- Card "Learning Stats" (bg #1a1425, padding 24px):
+  - Three columns:
+    - "12" large white, "Sessions Completed" gray small below
+    - "48" large white, "Hours Learned" gray small below
+    - "14" large white, "Day Best Streak" gray small below
+
+- Spacing 24px
+
+ACCOUNT TAB PREVIEW (shown as collapsed or secondary):
+- "Change Password" section
+- "Delete Account" section (with red outlined button, "Danger Zone" label)
+
+LEARNING MODES TAB PREVIEW:
+- Toggle for notification when new modes available
+
+NOTIFICATIONS TAB PREVIEW:
+- Toggle switches for email preferences
+
+Clear tab navigation, organized sections, edit actions visible.
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+COURSE COMPLETION PAGE
+//////////////////////////////////////////////////////////////////////////////
+Design a minimal course completion page for "DocLearn". 1440x900 resolution.
+
+LAYOUT: Left sidebar + Main content centered
+
+SIDEBAR: Same navigation present (user can still navigate away)
+
+MAIN CONTENT (centered, max-width 500px):
+
+- Large checkmark icon: Circle with checkmark inside, purple color (#8b5cf6), 80px size
+- Spacing 24px
+- Heading: "Congratulations!" white bold 28px
+- Spacing 8px
+- Subheading: "You've completed" gray
+- Course name: "Machine Learning Basics" white bold 20px
+- Spacing 32px
+
+- Stats card (bg #1a1425, padding 24px, rounded):
+  - Three items in row with dividers:
+    - "7" large + "Days" small gray
+    - "7" large + "Hours" small gray  
+    - "15" large + "Topics" small gray
+
+- Spacing 32px
+
+- Button: "Start New Session" purple filled, full width
+- Spacing 12px
+- Button: "Back to Dashboard" outlined gray, full width
+- Spacing 24px
+- Link: "View session details" gray small underlined
+
+Minimal celebration, clear next actions, navigation remains available.
+
+
+
+//////////////////////////////////////////////////////////////////////////////////
+EMPTY STATE NO SESSION
+////////////////////////////////////////////////////////////////////////////4
+
+
+Design an empty state for when user has no sessions in "DocLearn". 1440x900 resolution.
+
+LAYOUT: Left sidebar + Main content
+
+SIDEBAR: Same navigation, "My Sessions" active
+
+MAIN CONTENT (centered):
+- Header: "My Sessions" left, "+ New Session" button right (purple)
+- Spacing 48px
+
+- Empty state centered (max-width 400px):
+  - Simple icon: Folder with plus sign, line icon style, 64px, gray color (#6b7280)
+  - Spacing 24px
+  - Heading: "No sessions yet" white bold 20px
+  - Spacing 8px
+  - Subtext: "Create your first AI-powered learning session and start mastering new skills" gray centered
+  - Spacing 32px
+  - Button: "Create First Session" purple, medium size
+  - Spacing 16px
+  - Small text: "Choose from multiple learning modes" gray 12px
+
+Simple, action-oriented, not sad or discouraging feeling. Clear CTA.

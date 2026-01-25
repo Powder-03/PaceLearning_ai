@@ -4,12 +4,16 @@ Generation Mode Microservice - Main Application.
 AI-powered curriculum generation and interactive tutoring service.
 Uses MongoDB for all data storage (sessions, chat history, etc.).
 """
+import os
 import sys
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from app.core.config import settings
 from app.api.routers import get_all_routers
@@ -153,17 +157,45 @@ This service provides:
     app.include_router(health_router)
     app.include_router(test_router)
     
-    # Root endpoint
-    @app.get("/", tags=["Root"])
-    async def root():
-        """Root endpoint with service information."""
-        return {
-            "service": settings.SERVICE_NAME,
-            "version": settings.SERVICE_VERSION,
-            "status": "running",
-            "environment": settings.ENV,
-            "docs": "/docs",
-        }
+    # Static files directory (for production frontend)
+    static_dir = Path(__file__).parent.parent / "static"
+    
+    # Serve static files if the directory exists (production build)
+    if static_dir.exists():
+        log.info(f"Serving static files from: {static_dir}")
+        
+        # Mount static assets (JS, CSS, images)
+        app.mount("/assets", StaticFiles(directory=static_dir / "assets"), name="assets")
+        
+        # Serve index.html for SPA routes (must be after API routes)
+        @app.get("/{full_path:path}", include_in_schema=False)
+        async def serve_spa(request: Request, full_path: str):
+            """Serve the SPA for all non-API routes."""
+            # Skip API routes
+            if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("redoc") or full_path.startswith("openapi"):
+                return None
+            
+            # Check if file exists in static dir
+            file_path = static_dir / full_path
+            if file_path.exists() and file_path.is_file():
+                return FileResponse(file_path)
+            
+            # Return index.html for SPA routing
+            return FileResponse(static_dir / "index.html")
+    else:
+        log.info("No static directory found - running in API-only mode")
+        
+        # Root endpoint (only when no frontend)
+        @app.get("/", tags=["Root"])
+        async def root():
+            """Root endpoint with service information."""
+            return {
+                "service": settings.SERVICE_NAME,
+                "version": settings.SERVICE_VERSION,
+                "status": "running",
+                "environment": settings.ENV,
+                "docs": "/docs",
+            }
     
     return app
 

@@ -88,6 +88,15 @@ class ChatService:
         if session["status"] == SessionStatus.READY.value:
             await self.session_service.set_status(session_id, SessionStatus.IN_PROGRESS.value)
         
+        # Get lesson plan info for topic advancement analysis
+        lesson_plan = session.get("lesson_plan") or {}
+        days = lesson_plan.get("days", [])
+        current_day = session["current_day"]
+        current_topic_index = session["current_topic_index"]
+        day_content = days[current_day - 1] if current_day <= len(days) else {}
+        topics = day_content.get("topics", [])
+        current_topic = topics[current_topic_index] if current_topic_index < len(topics) else {}
+        
         # Build graph state from session (now includes MongoDB chat history)
         state = await self._build_state_from_session(session, message)
         
@@ -95,33 +104,34 @@ class ChatService:
         result = await invoke_generation_graph(state)
         
         # Store messages in MongoDB (handles buffer + summarization)
-        if result.get("ai_response"):
+        ai_response = result.get("ai_response", "")
+        if ai_response:
             await self.memory.add_user_message(str(session_id), message)
-            await self.memory.add_assistant_message(str(session_id), result["ai_response"])
+            await self.memory.add_assistant_message(str(session_id), ai_response)
         
-        # Handle topic advancement
-        if result.get("should_advance_topic"):
-            await self.session_service.advance_topic(session_id)
+        # Use LLM-based sentiment analysis to determine topic advancement
+        should_advance = await self._should_advance_topic(message, ai_response, current_topic)
         
-        # Handle day completion
-        if result.get("is_day_complete"):
-            if not result.get("is_course_complete"):
-                # Move to next day
-                await self.session_service.advance_day(session_id)
+        new_topic_index = current_topic_index
+        is_day_complete = False
         
-        # Handle course completion
-        if result.get("is_course_complete"):
-            await self.session_service.set_status(session_id, SessionStatus.COMPLETED.value)
+        if should_advance:
+            if current_topic_index < len(topics) - 1:
+                new_topic_index = current_topic_index + 1
+                await self.session_service.advance_topic(session_id)
+                logger.info(f"Advanced to topic {new_topic_index} in day {current_day}")
+            else:
+                is_day_complete = True
+                logger.info(f"Day {current_day} completed")
         
-        # Refresh session for latest state
-        session = await self.session_service.get_session(session_id)
+        is_course_complete = is_day_complete and current_day >= session["total_days"]
         
         return {
-            "response": result.get("ai_response", ""),
-            "current_day": session["current_day"],
-            "current_topic_index": session["current_topic_index"],
-            "is_day_complete": result.get("is_day_complete", False),
-            "is_course_complete": result.get("is_course_complete", False),
+            "response": ai_response,
+            "current_day": current_day,
+            "current_topic_index": new_topic_index,
+            "is_day_complete": is_day_complete,
+            "is_course_complete": is_course_complete,
         }
     
     async def start_lesson(
@@ -297,53 +307,96 @@ class ChatService:
             await self.memory.add_user_message(str(session_id), message)
             await self.memory.add_assistant_message(str(session_id), full_response)
             
-            # Determine if we should advance
-            should_advance = self._should_advance_topic(message)
+            # Use LLM-based sentiment analysis to determine topic advancement
+            should_advance = await self._should_advance_topic(message, full_response, current_topic)
             
-            # Handle topic advancement
+            new_topic_index = current_topic_index
+            is_day_complete = False
+            
             if should_advance:
-                await self.session_service.advance_topic(session_id)
+                # Advance to next topic
+                if current_topic_index < len(topics) - 1:
+                    new_topic_index = current_topic_index + 1
+                    await self.session_service.advance_topic(session_id)
+                    logger.info(f"Advanced to topic {new_topic_index} in day {current_day}")
+                else:
+                    # All topics in day complete
+                    is_day_complete = True
+                    logger.info(f"Day {current_day} completed")
             
-            # Check completion status
-            is_day_complete = should_advance and current_topic_index >= len(topics) - 1
             is_course_complete = is_day_complete and current_day >= session["total_days"]
-            
-            # Handle day completion
-            if is_day_complete and not is_course_complete:
-                await self.session_service.advance_day(session_id)
-            
-            # Handle course completion
-            if is_course_complete:
-                await self.session_service.set_status(session_id, SessionStatus.COMPLETED.value)
-            
-            # Refresh session for latest state
-            session = await self.session_service.get_session(session_id)
             
             # Yield final metadata
             yield ("", {
-                "current_day": session["current_day"],
-                "current_topic_index": session["current_topic_index"],
+                "current_day": current_day,
+                "current_topic_index": new_topic_index,
                 "is_day_complete": is_day_complete,
                 "is_course_complete": is_course_complete,
+                "topic_advanced": should_advance,
             })
             
         except Exception as e:
             logger.exception(f"Streaming error: {str(e)}")
             raise
     
-    def _should_advance_topic(self, user_message: str) -> bool:
-        """Check if user message indicates readiness to advance."""
+    async def _should_advance_topic(self, user_message: str, ai_response: str, current_topic: Dict[str, Any]) -> bool:
+        """
+        Use Gemini 2.5 Flash to analyze if user has understood the topic and is ready to advance.
+        
+        Performs sentiment analysis on the conversation to determine:
+        1. Has the user demonstrated understanding of the current topic?
+        2. Is the user explicitly asking to move forward?
+        3. Has the AI completed explaining the topic?
+        
+        Returns True only if the LLM determines the user is ready.
+        """
         if not user_message:
             return False
         
-        advance_phrases = [
-            "i understand", "got it", "continue", "next", "move on",
-            "let's continue", "ready", "understood", "makes sense",
-            "i get it", "clear", "okay", "ok", "yes"
-        ]
+        topic_title = current_topic.get("title", "current topic") if current_topic else "current topic"
         
-        user_lower = user_message.lower().strip()
-        return any(phrase in user_lower for phrase in advance_phrases)
+        # Use Gemini 2.5 Flash for sentiment analysis
+        llm = get_tutor_llm(temperature=0.1, streaming=False)
+        
+        analysis_prompt = f"""Analyze this conversation exchange and determine if the student should advance to the next topic.
+
+CURRENT TOPIC: {topic_title}
+
+STUDENT'S MESSAGE: "{user_message}"
+
+TUTOR'S RESPONSE: "{ai_response[:500]}..."
+
+Evaluate:
+1. Is the student EXPLICITLY requesting to move to the next topic? (e.g., "next topic", "move on", "what's next")
+2. Has the student demonstrated clear understanding through their response?
+3. Is this just a simple acknowledgment (like "okay", "yes", "got it") without deeper engagement?
+
+IMPORTANT RULES:
+- Simple acknowledgments like "okay", "yes", "got it", "thanks" should return NO
+- Questions about the current topic should return NO (student wants to learn more)
+- Only return YES if the student explicitly asks to move forward OR shows mastery AND requests progression
+
+Respond with ONLY one word: YES or NO"""
+
+        try:
+            messages = [
+                SystemMessage(content="You are an educational assessment assistant. Analyze student readiness precisely."),
+                HumanMessage(content=analysis_prompt)
+            ]
+            
+            response = await llm.ainvoke(messages)
+            result = response.content.strip().upper()
+            
+            should_advance = result == "YES"
+            logger.info(f"LLM topic advancement analysis: {result} (advance={should_advance})")
+            
+            return should_advance
+            
+        except Exception as e:
+            logger.error(f"Error in LLM topic advancement analysis: {e}")
+            # Fallback: only advance on very explicit requests
+            explicit_phrases = ["next topic", "move on", "next lesson", "what's next"]
+            return any(phrase in user_message.lower() for phrase in explicit_phrases)
     
     async def _build_state_from_session(
         self,

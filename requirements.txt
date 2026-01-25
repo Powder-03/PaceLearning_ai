@@ -29,3 +29,5 @@ email-validator  # For Pydantic EmailStr validation
 
 # Utilities
 python-dateutil
+# PDF Generation
+reportlab

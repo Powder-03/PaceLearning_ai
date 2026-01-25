@@ -178,20 +178,15 @@ async def tutor_node(state: GenerationGraphState) -> Dict[str, Any]:
             new_history.append(HumanMessage(content=user_message))
         new_history.append(AIMessage(content=ai_response))
         
-        # Check if we should advance (simplified logic - can be enhanced)
-        should_advance = _should_advance_topic(user_message, ai_response)
-        
-        # Check completion status
-        is_day_complete = _is_day_complete(day_content, current_topic_index, should_advance)
-        is_course_complete = is_day_complete and current_day >= state["total_days"]
+        # No automatic advancement - user controls day navigation manually
         
         return {
             "ai_response": ai_response,
             "chat_history": new_history,
-            "should_advance_topic": should_advance,
-            "is_day_complete": is_day_complete,
-            "is_course_complete": is_course_complete,
-            "used_streaming": use_streaming,  # Include for debugging/logging
+            "should_advance_topic": False,
+            "is_day_complete": False,
+            "is_course_complete": False,
+            "used_streaming": use_streaming,
         }
         
     except Exception as e:
@@ -277,24 +272,13 @@ def _get_current_topic(day_content: Dict[str, Any], topic_index: int) -> Dict[st
 
 def _should_advance_topic(user_message: str, ai_response: str) -> bool:
     """
-    Determine if we should advance to the next topic.
+    Legacy placeholder - actual LLM-based advancement is done in chat_service.py.
+    This function is kept for backwards compatibility but always returns False.
     
-    This is a simplified heuristic. Could be enhanced with:
-    - Sentiment analysis
-    - Explicit user confirmation detection
-    - LLM-based classification
+    The chat_service.py now uses Gemini 2.5 Flash for intelligent sentiment
+    analysis to determine when a student is ready to advance topics.
     """
-    if not user_message:
-        return False
-    
-    advance_phrases = [
-        "i understand", "got it", "continue", "next", "move on",
-        "let's continue", "ready", "understood", "makes sense",
-        "i get it", "clear", "okay", "ok", "yes"
-    ]
-    
-    user_lower = user_message.lower().strip()
-    return any(phrase in user_lower for phrase in advance_phrases)
+    return False
 
 
 def _is_day_complete(day_content: Dict[str, Any], current_topic_index: int, advancing: bool) -> bool:

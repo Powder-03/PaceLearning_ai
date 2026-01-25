@@ -6,6 +6,7 @@ Aggregates all route modules into a single router.
 from fastapi import APIRouter
 
 from app.api.routes import sessions_router, chat_router, health_router, test_router, auth_router
+from app.api.routes.pdf import router as pdf_router
 
 
 def create_api_router() -> APIRouter:
@@ -23,6 +24,7 @@ def create_api_router() -> APIRouter:
     api_router.include_router(auth_router)
     api_router.include_router(sessions_router)
     api_router.include_router(chat_router)
+    api_router.include_router(pdf_router)
     
     return api_router
 

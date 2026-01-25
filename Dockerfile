@@ -1,4 +1,24 @@
-# Stage 1: Builder
+# Stage 1: Frontend Builder
+FROM node:20-slim AS frontend-builder
+
+WORKDIR /app/frontend
+
+# Copy frontend package files
+COPY frontend/package*.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy frontend source
+COPY frontend/ ./
+
+# Set the API URL for production build
+ENV VITE_API_URL=""
+
+# Build frontend
+RUN npm run build
+
+# Stage 2: Python Builder
 FROM python:3.11-slim AS builder
 
 WORKDIR /app
@@ -10,7 +30,7 @@ RUN pip install --upgrade pip
 COPY requirements.txt .
 RUN pip wheel --no-cache-dir --wheel-dir /app/wheels -r requirements.txt
 
-# Stage 2: Final
+# Stage 3: Final
 FROM python:3.11-slim
 
 WORKDIR /app
@@ -23,6 +43,9 @@ RUN pip install --no-index --find-links=/app/wheels /app/wheels/*
 
 # Copy application code
 COPY ./app /app/app
+
+# Copy frontend build from frontend-builder stage
+COPY --from=frontend-builder /app/frontend/dist /app/static
 
 # Expose port (Cloud Run will set PORT env var)
 EXPOSE 8080
