@@ -23,15 +23,25 @@ class CreatePlanRequest(BaseModel):
         examples=["Quantum Computing", "Machine Learning Basics"]
     )
     total_days: int = Field(
-        ..., 
+        default=7, 
         ge=1, 
         le=90,
         description="Number of days for the learning plan"
     )
     time_per_day: str = Field(
-        ..., 
+        default="1 hour", 
         description="Time commitment per day",
         examples=["1 hour", "30 minutes", "2 hours"]
+    )
+    mode: str = Field(
+        default="generation",
+        description="Learning mode: 'generation' for multi-day, 'quick' for single session"
+    )
+    target: Optional[str] = Field(
+        default=None,
+        max_length=500,
+        description="Learning goal or target (e.g., exam prep, career switch, project-based)",
+        examples=["GATE exam", "Job interview prep", "Build a portfolio project", "Quick revision"]
     )
 
     class Config:
@@ -39,7 +49,9 @@ class CreatePlanRequest(BaseModel):
             "example": {
                 "topic": "Introduction to Machine Learning",
                 "total_days": 14,
-                "time_per_day": "1 hour"
+                "time_per_day": "1 hour",
+                "mode": "generation",
+                "target": None
             }
         }
 

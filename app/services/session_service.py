@@ -26,6 +26,7 @@ class SessionStatus(str, PyEnum):
 class SessionMode(str, PyEnum):
     """Mode of learning session."""
     GENERATION = "generation"
+    QUICK = "quick"
     RAG = "rag"
 
 
@@ -58,6 +59,7 @@ class SessionService:
         total_days: int,
         time_per_day: str,
         mode: str = SessionMode.GENERATION.value,
+        target: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Create a new learning session.
@@ -67,7 +69,8 @@ class SessionService:
             topic: Learning topic
             total_days: Total days for the plan
             time_per_day: Daily time commitment
-            mode: Session mode (generation or rag)
+            mode: Session mode (generation, quick, or rag)
+            target: Target exam or goal (for quick mode)
             
         Returns:
             Created session document
@@ -83,6 +86,7 @@ class SessionService:
                 "topic": topic,
                 "total_days": total_days,
                 "time_per_day": time_per_day,
+                "target": target,
                 "lesson_plan": None,
                 "current_day": 1,
                 "current_topic_index": 0,

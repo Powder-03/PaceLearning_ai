@@ -60,6 +60,8 @@ async def create_session(
             topic=request.topic,
             total_days=request.total_days,
             time_per_day=request.time_per_day,
+            mode=request.mode,
+            target=request.target,
         )
         
         return CreatePlanResponse(

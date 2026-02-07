@@ -26,6 +26,8 @@ from app.core.llm_factory import (
 from app.core.prompts import (
     PLAN_GENERATION_SYSTEM_PROMPT,
     PLAN_GENERATION_PROMPT,
+    QUICK_PLAN_GENERATION_SYSTEM_PROMPT,
+    QUICK_PLAN_GENERATION_PROMPT,
     TUTOR_SYSTEM_PROMPT,
     TUTOR_FIRST_MESSAGE_PROMPT,
 )
@@ -47,20 +49,32 @@ async def plan_generator_node(state: GenerationGraphState) -> Dict[str, Any]:
     Returns:
         Updated state with lesson_plan and initial ai_response
     """
-    logger.info(f"Generating lesson plan for topic: {state['topic']}")
+    mode = state.get("mode", "generation")
+    target = state.get("target", "General understanding")
+    logger.info(f"Generating lesson plan for topic: {state['topic']} (mode={mode})")
     
     # Planning always uses burst mode (need complete JSON)
     llm = get_planner_llm(temperature=0.3, streaming=False)
     
-    # Build the planning prompt
-    prompt = PLAN_GENERATION_PROMPT.format(
-        topic=state["topic"],
-        total_days=state["total_days"],
-        time_per_day=state["time_per_day"]
-    )
+    # Build the planning prompt based on mode
+    if mode == "quick":
+        system_prompt = QUICK_PLAN_GENERATION_SYSTEM_PROMPT
+        prompt = QUICK_PLAN_GENERATION_PROMPT.format(
+            topic=state["topic"],
+            time_per_day=state["time_per_day"],
+            target=target or "General understanding",
+        )
+    else:
+        system_prompt = PLAN_GENERATION_SYSTEM_PROMPT
+        prompt = PLAN_GENERATION_PROMPT.format(
+            topic=state["topic"],
+            total_days=state["total_days"],
+            time_per_day=state["time_per_day"],
+            goal=target or "Master the topic thoroughly",
+        )
     
     messages = [
-        SystemMessage(content=PLAN_GENERATION_SYSTEM_PROMPT),
+        SystemMessage(content=system_prompt),
         HumanMessage(content=prompt)
     ]
     
@@ -129,15 +143,30 @@ async def tutor_node(state: GenerationGraphState) -> Dict[str, Any]:
     current_topic = _get_current_topic(day_content, current_topic_index)
     
     # Build system prompt with context
-    system_prompt = TUTOR_SYSTEM_PROMPT.format(
-        topic=state["topic"],
-        current_day=current_day,
-        total_days=state["total_days"],
-        day_title=day_content.get("title", f"Day {current_day}"),
-        day_objectives=", ".join(day_content.get("objectives", [])),
-        current_topic=json.dumps(current_topic, indent=2) if current_topic else "Wrapping up the day",
-        memory_summary=state.get("memory_summary") or "This is the start of the conversation.",
-    )
+    mode = state.get("mode", "generation")
+    target = state.get("target", "General understanding")
+    
+    if mode == "quick":
+        from app.core.prompts import QUICK_TUTOR_SYSTEM_PROMPT
+        system_prompt = QUICK_TUTOR_SYSTEM_PROMPT.format(
+            topic=state["topic"],
+            target=target,
+            day_title=day_content.get("title", state["topic"]),
+            day_objectives=", ".join(day_content.get("objectives", [])),
+            current_topic=json.dumps(current_topic, indent=2) if current_topic else "Wrapping up the session",
+            memory_summary=state.get("memory_summary") or "This is the start of the conversation.",
+        )
+    else:
+        system_prompt = TUTOR_SYSTEM_PROMPT.format(
+            topic=state["topic"],
+            current_day=current_day,
+            total_days=state["total_days"],
+            day_title=day_content.get("title", f"Day {current_day}"),
+            day_objectives=", ".join(day_content.get("objectives", [])),
+            current_topic=json.dumps(current_topic, indent=2) if current_topic else "Wrapping up the day",
+            memory_summary=state.get("memory_summary") or "This is the start of the conversation.",
+            goal=target or "Master the topic thoroughly",
+        )
     
     # Build messages
     messages = [SystemMessage(content=system_prompt)]

@@ -6,15 +6,20 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-# SMTP Configuration - Using your credentials
-SMTP_HOST = "smtp.gmail.com"
-SMTP_PORT = 587
-SMTP_USER = "rishabh19112003@gmail.com"
-SMTP_PASSWORD = "maixjgscggvdvxaz"  # App password without spaces
-EMAIL_FROM_NAME = "DocLearn"
+# SMTP Configuration - Load from environment variables
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USER")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")  # App password from .env file
+EMAIL_FROM_NAME = os.getenv("EMAIL_FROM_NAME", "DocLearn")
 
 # Test recipient (send to yourself)
-TEST_RECIPIENT = "rishabh2312126@akgec.ac.in"
+TEST_RECIPIENT = os.getenv("TEST_RECIPIENT", "your-email@example.com")
 
 
 def test_smtp_connection():

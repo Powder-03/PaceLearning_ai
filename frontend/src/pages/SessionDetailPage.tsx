@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Check, Circle, Play } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Circle, Play, Zap } from 'lucide-react';
 import { Button, Card, Badge, ProgressBar, Spinner } from '../components/ui';
 import { sessionService } from '../services';
 import type { Session } from '../types';
@@ -68,16 +68,30 @@ export function SessionDetailPage() {
         </Link>
 
         <div className="flex items-center gap-3 mb-4">
-          <Badge variant="purple">AI TUTOR</Badge>
+          <Badge variant={session.mode === 'quick' ? 'warning' : 'purple'}>
+            {session.mode === 'quick' ? '⚡ QUICK' : 'AI TUTOR'}
+          </Badge>
           <h1 className="text-xl font-bold text-white">{session.topic}</h1>
         </div>
 
-        <div className="mb-4">
-          <ProgressBar value={progressPercentage} />
-          <p className="text-sm text-gray-400 mt-2">
-            Day {session.current_day} of {session.total_days} • {Math.round(progressPercentage)}% complete
-          </p>
-        </div>
+        {session.mode === 'quick' ? (
+          <div className="mb-4">
+            <p className="text-sm text-gray-400">
+              Single session • {session.time_per_day}
+              {session.target && <> • 🎯 {session.target}</>}
+            </p>
+          </div>
+        ) : (
+          <div className="mb-4">
+            <ProgressBar value={progressPercentage} />
+            <p className="text-sm text-gray-400 mt-2">
+              Day {session.current_day} of {session.total_days} • {Math.round(progressPercentage)}% complete
+            </p>
+            {session.target && (
+              <p className="text-sm text-gray-500 mt-1">🎯 Goal: {session.target}</p>
+            )}
+          </div>
+        )}
 
         <div className="flex justify-end">
           <Link to={`/chat/${sessionId}`}>

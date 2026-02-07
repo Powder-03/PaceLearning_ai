@@ -25,6 +25,8 @@ class GenerationGraphState(TypedDict):
     topic: str
     total_days: int
     time_per_day: str
+    mode: str  # "generation" or "quick"
+    target: Optional[str]  # Target exam/goal for quick mode
     
     # Generated Content
     lesson_plan: Optional[Dict[str, Any]]
@@ -58,6 +60,8 @@ def create_initial_state(
     current_topic_index: int = 0,
     chat_history: Optional[List[BaseMessage]] = None,
     memory_summary: Optional[str] = None,
+    mode: str = "generation",
+    target: Optional[str] = None,
 ) -> GenerationGraphState:
     """
     Factory function to create an initial graph state.
@@ -73,6 +77,8 @@ def create_initial_state(
         current_topic_index: Current topic within the day
         chat_history: Previous conversation messages
         memory_summary: Compressed conversation summary
+        mode: Session mode ('generation' or 'quick')
+        target: Target exam/goal for quick mode
         
     Returns:
         Initialized GenerationGraphState
@@ -83,6 +89,8 @@ def create_initial_state(
         topic=topic,
         total_days=total_days,
         time_per_day=time_per_day,
+        mode=mode,
+        target=target,
         lesson_plan=lesson_plan,
         current_day=current_day,
         current_topic_index=current_topic_index,

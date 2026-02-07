@@ -5,7 +5,7 @@ Business logic for creating and managing lesson plans.
 Orchestrates the plan generation process using MongoDB.
 """
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from uuid import UUID
 
 from app.services.session_service import SessionService, SessionStatus
@@ -37,6 +37,8 @@ class PlanService:
         topic: str,
         total_days: int,
         time_per_day: str,
+        mode: str = "generation",
+        target: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Create a new learning plan.
@@ -52,6 +54,8 @@ class PlanService:
             topic: Topic to learn
             total_days: Number of days for the plan
             time_per_day: Daily time commitment
+            mode: Learning mode ('generation' or 'quick')
+            target: Target exam or goal (for quick mode)
             
         Returns:
             Dictionary containing:
@@ -63,16 +67,22 @@ class PlanService:
         Raises:
             Exception: If plan generation fails
         """
+        # Force single day for quick mode
+        if mode == "quick":
+            total_days = 1
+        
         # Create the session (async)
         session = await self.session_service.create_session(
             user_id=user_id,
             topic=topic,
             total_days=total_days,
             time_per_day=time_per_day,
+            mode=mode,
+            target=target,
         )
         
         session_id = session["session_id"]
-        logger.info(f"Created session {session_id}, starting plan generation")
+        logger.info(f"Created session {session_id}, starting plan generation (mode={mode})")
         
         # Build initial state for the graph
         initial_state = create_initial_state(
@@ -82,6 +92,8 @@ class PlanService:
             total_days=total_days,
             time_per_day=time_per_day,
             lesson_plan=None,  # No plan yet - triggers planning node
+            mode=mode,
+            target=target,
         )
         
         try:

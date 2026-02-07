@@ -57,6 +57,8 @@ export interface CreatePlanRequest {
   topic: string;
   total_days: number;
   time_per_day: string;
+  mode?: string;
+  target?: string;
 }
 
 export interface CreatePlanResponse {
@@ -103,6 +105,7 @@ export interface Session {
   current_topic_index: number;
   status: 'PLANNING' | 'READY' | 'IN_PROGRESS' | 'COMPLETED';
   mode: string;
+  target?: string;
   lesson_plan: LessonPlan | null;
   created_at: string;
   updated_at: string;

@@ -9,7 +9,9 @@ import {
   FileText,
   ClipboardList,
   Download,
-  CheckCircle
+  CheckCircle,
+  Menu,
+  Zap
 } from 'lucide-react';
 import { Button, Spinner, Modal } from '../components/ui';
 import { chatService, sessionService, pdfService } from '../services';
@@ -27,7 +29,8 @@ export function ChatPage() {
   const [isSending, setIsSending] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
   const [currentDay, setCurrentDay] = useState(1);
-  const [showSidebar, setShowSidebar] = useState(true);
+  const [showSidebar, setShowSidebar] = useState(window.innerWidth >= 1024);
+  const [showLeftSidebar, setShowLeftSidebar] = useState(false);
   const [dayContent, setDayContent] = useState<DayPlan | null>(null);
   
   // Day completion modal state
@@ -271,80 +274,147 @@ export function ChatPage() {
 
   return (
     <div className="h-screen bg-dark flex">
+      {/* Mobile Left Sidebar Overlay */}
+      {showLeftSidebar && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setShowLeftSidebar(false)}
+        />
+      )}
+
       {/* Left Sidebar - Days */}
-      <aside className="w-52 bg-dark-card border-r border-dark-border flex flex-col shrink-0">
-        <div className="p-4 border-b border-dark-border">
+      <aside className={`
+        ${showLeftSidebar ? 'translate-x-0' : '-translate-x-full'}
+        lg:translate-x-0
+        fixed lg:relative z-50 lg:z-auto
+        w-52 bg-dark-card border-r border-dark-border flex flex-col shrink-0
+        transition-transform duration-200 ease-in-out
+        h-full
+      `}>
+        <div className="p-4 border-b border-dark-border flex items-center justify-between">
           <Link to="/" className="text-lg font-bold text-white">
             DocLearn
           </Link>
+          <button 
+            onClick={() => setShowLeftSidebar(false)}
+            className="lg:hidden p-1 text-gray-400 hover:text-white"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
         
         <div className="p-4 border-b border-dark-border">
           <Link 
-            to={`/sessions/${sessionId}`}
+            to={session.mode === 'quick' ? '/sessions' : `/sessions/${sessionId}`}
             className="flex items-center gap-2 text-sm text-gray-400 hover:text-white"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Session
+            {session.mode === 'quick' ? 'Back to Sessions' : 'Back to Session'}
           </Link>
         </div>
 
-        <div className="p-4 flex-1">
-          <p className="text-xs font-medium text-gray-500 uppercase mb-3">Days</p>
-          <div className="space-y-1">
-            {Array.from({ length: session.total_days }, (_, i) => i + 1).map((day) => {
-              const isCurrent = day === currentDay;
-              
-              return (
-                <button
-                  key={day}
-                  onClick={() => handleDayClick(day)}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                    isCurrent
-                      ? 'bg-primary/20 text-white'
-                      : 'text-gray-400 hover:bg-dark-hover hover:text-white'
-                  }`}
-                >
-                  {isCurrent ? (
-                    <div className="w-4 h-4 rounded-full bg-primary" />
-                  ) : (
-                    <Circle className="w-4 h-4" />
-                  )}
-                  <span>Day {day}</span>
-                </button>
-              );
-            })}
+        {session.mode === 'quick' ? (
+          // Quick Mode sidebar content
+          <div className="p-4 flex-1 overflow-y-auto">
+            <div className="flex items-center gap-2 mb-4">
+              <Zap className="w-4 h-4 text-yellow-400" />
+              <span className="text-sm font-medium text-yellow-400">Quick Session</span>
+            </div>
+            <p className="text-sm text-white mb-3 font-medium">{session.topic}</p>
+            {session.target && (
+              <div className="p-3 bg-dark rounded-lg">
+                <p className="text-xs text-gray-500 mb-1">🎯 Target</p>
+                <p className="text-sm text-gray-300">{session.target}</p>
+              </div>
+            )}
+            {dayContent && dayContent.topics && (
+              <div className="mt-4">
+                <p className="text-xs text-gray-500 mb-2">Topics</p>
+                <div className="space-y-1.5">
+                  {dayContent.topics.map((topic, i) => (
+                    <div key={i} className="flex items-center gap-2 text-xs">
+                      <Circle className="w-2.5 h-2.5 text-yellow-400" />
+                      <span className="text-gray-400">{topic.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-        </div>
+        ) : (
+          // Multi-day sidebar content
+          <div className="p-4 flex-1 overflow-y-auto">
+            <p className="text-xs font-medium text-gray-500 uppercase mb-3">Days</p>
+            <div className="space-y-1">
+              {Array.from({ length: session.total_days }, (_, i) => i + 1).map((day) => {
+                const isCurrent = day === currentDay;
+                
+                return (
+                  <button
+                    key={day}
+                    onClick={() => {
+                      handleDayClick(day);
+                      setShowLeftSidebar(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                      isCurrent
+                        ? 'bg-primary/20 text-white'
+                        : 'text-gray-400 hover:bg-dark-hover hover:text-white'
+                    }`}
+                  >
+                    {isCurrent ? (
+                      <div className="w-4 h-4 rounded-full bg-primary" />
+                    ) : (
+                      <Circle className="w-4 h-4" />
+                    )}
+                    <span>Day {day}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="p-4 border-t border-dark-border">
           <p className="text-xs text-gray-500 truncate">{session.topic}</p>
+          {session.mode !== 'quick' && session.target && (
+            <p className="text-xs text-gray-500 mt-1 truncate">🎯 {session.target}</p>
+          )}
         </div>
       </aside>
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Chat Header */}
-        <header className="bg-dark-card border-b border-dark-border px-6 py-4 flex items-center justify-between">
-          <h1 className="text-white font-medium">
-            Day {currentDay}: {dayContent?.title || session.lesson_plan?.days?.[currentDay - 1]?.title || 'Loading...'}
+        <header className="bg-dark-card border-b border-dark-border px-4 sm:px-6 py-4 flex items-center justify-between">
+          <button
+            onClick={() => setShowLeftSidebar(true)}
+            className="lg:hidden p-2 text-gray-400 hover:text-white transition-colors mr-2 shrink-0"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <h1 className="text-white font-medium truncate flex-1">
+            {session.mode === 'quick' 
+              ? `⚡ ${session.topic}`
+              : `Day ${currentDay}: ${dayContent?.title || session.lesson_plan?.days?.[currentDay - 1]?.title || 'Loading...'}`
+            }
           </h1>
           <button
             onClick={() => setShowSidebar(!showSidebar)}
-            className="p-2 text-gray-400 hover:text-white transition-colors"
+            className="p-2 text-gray-400 hover:text-white transition-colors shrink-0"
           >
             <Info className="w-5 h-5" />
           </button>
         </header>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
           {messages.map((msg, i) => (
             <div
               key={i}
               className={`flex ${msg.role === 'human' ? 'justify-end' : 'justify-start'}`}
             >
-              <div className={`max-w-[70%] ${msg.role === 'human' ? '' : ''}`}>
+              <div className={`max-w-[85%] sm:max-w-[70%] ${msg.role === 'human' ? '' : ''}`}>
                 {msg.role === 'assistant' && (
                   <p className="text-xs text-gray-500 mb-1">AI Tutor</p>
                 )}
@@ -391,7 +461,7 @@ export function ChatPage() {
 
         {/* Suggested Prompts */}
         {!isSending && messages.length > 0 && (
-          <div className="px-6 py-2 flex gap-2 flex-wrap">
+          <div className="px-4 sm:px-6 py-2 flex gap-2 flex-wrap">
             {suggestedPrompts.map((prompt) => (
               <button
                 key={prompt}
@@ -430,9 +500,15 @@ export function ChatPage() {
 
       {/* Right Sidebar - Lesson Info */}
       {showSidebar && (
-        <aside className="w-72 bg-dark-card border-l border-dark-border flex flex-col shrink-0">
+        <>
+        {/* Mobile overlay backdrop */}
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setShowSidebar(false)}
+        />
+        <aside className="fixed right-0 top-0 h-full z-50 lg:relative lg:z-auto w-72 bg-dark-card border-l border-dark-border flex flex-col shrink-0">
           <div className="p-4 border-b border-dark-border flex items-center justify-between">
-            <h2 className="font-medium text-white">Today's Lesson</h2>
+            <h2 className="font-medium text-white">{session.mode === 'quick' ? 'Session Info' : "Today's Lesson"}</h2>
             <button
               onClick={() => setShowSidebar(false)}
               className="p-1 text-gray-400 hover:text-white"
@@ -487,12 +563,25 @@ export function ChatPage() {
           </div>
 
           <div className="p-4 border-t border-dark-border">
-            <p className="text-sm text-gray-400 mb-1">Progress</p>
-            <p className="text-white">
-              Day {currentDay} of {session.total_days}
-            </p>
+            {session.mode === 'quick' ? (
+              <>
+                <p className="text-sm text-yellow-400 mb-1">⚡ Quick Session</p>
+                {session.target && <p className="text-xs text-gray-500">🎯 {session.target}</p>}
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-gray-400 mb-1">Progress</p>
+                <p className="text-white">
+                  Day {currentDay} of {session.total_days}
+                </p>
+                {session.target && (
+                  <p className="text-xs text-gray-500 mt-1">🎯 {session.target}</p>
+                )}
+              </>
+            )}
           </div>
         </aside>
+        </>
       )}
 
       {/* Day Completion Modal */}

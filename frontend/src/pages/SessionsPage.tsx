@@ -113,7 +113,9 @@ export function SessionsPage() {
             <Card key={session.session_id} className="relative group">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <Badge variant="purple" size="sm">AI TUTOR</Badge>
+                  <Badge variant={session.mode === 'quick' ? 'warning' : 'purple'} size="sm">
+                    {session.mode === 'quick' ? '⚡ QUICK' : 'AI TUTOR'}
+                  </Badge>
                 </div>
                 <button
                   onClick={() => setDeleteModal(session.session_id)}
@@ -129,12 +131,24 @@ export function SessionsPage() {
                 </h3>
               </Link>
 
+              {session.target && (
+                <p className="text-xs text-gray-500 mb-3 line-clamp-1">🎯 {session.target}</p>
+              )}
+
               <div className="mb-3">
                 <div className="flex items-center justify-between text-sm text-gray-400 mb-1">
-                  <span>Day {session.current_day} of {session.total_days}</span>
-                  <span>{Math.round(getProgressPercentage(session))}%</span>
+                  {session.mode === 'quick' ? (
+                    <span>Single session • {session.time_per_day}</span>
+                  ) : (
+                    <>
+                      <span>Day {session.current_day} of {session.total_days}</span>
+                      <span>{Math.round(getProgressPercentage(session))}%</span>
+                    </>
+                  )}
                 </div>
-                <ProgressBar value={getProgressPercentage(session)} size="sm" />
+                {session.mode !== 'quick' && (
+                  <ProgressBar value={getProgressPercentage(session)} size="sm" />
+                )}
               </div>
 
               <div className="flex items-center justify-between">
@@ -147,10 +161,10 @@ export function SessionsPage() {
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-gray-500">{session.time_per_day}</span>
                   <Link 
-                    to={`/sessions/${session.session_id}`}
+                    to={session.mode === 'quick' ? `/chat/${session.session_id}` : `/sessions/${session.session_id}`}
                     className="text-sm text-primary hover:underline flex items-center gap-1"
                   >
-                    Continue
+                    {session.mode === 'quick' ? 'Open' : 'Continue'}
                     <ArrowRight className="w-4 h-4" />
                   </Link>
                 </div>

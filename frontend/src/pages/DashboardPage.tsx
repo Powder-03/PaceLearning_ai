@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Sparkles, FileText, Video, Youtube, ArrowRight, Plus } from 'lucide-react';
+import { Sparkles, FileText, Video, Youtube, ArrowRight, Plus, Zap } from 'lucide-react';
 import { Card, Button, Badge, ProgressBar } from '../components/ui';
 import { useAuth } from '../context';
 import { sessionService } from '../services';
@@ -37,6 +37,15 @@ export function DashboardPage() {
       available: true,
       link: '/sessions/new',
       stats: `${sessionCount} sessions`,
+    },
+    {
+      id: 'quick-mode',
+      icon: Zap,
+      title: 'Quick Mode',
+      description: 'Learn any topic in one focused session',
+      available: true,
+      link: '/sessions/new',
+      stats: 'Single session',
     },
     {
       id: 'document-chat',
@@ -92,9 +101,12 @@ export function DashboardPage() {
               </div>
 
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-4 ${
-                mode.available ? 'bg-primary/20' : 'bg-dark-border'
+                mode.available ? (mode.id === 'quick-mode' ? 'bg-yellow-500/20' : 'bg-primary/20') : 'bg-dark-border'
               }`}>
-                <mode.icon className={`w-5 h-5 ${mode.available ? 'text-primary' : 'text-gray-500'}`} />
+                <mode.icon className={`w-5 h-5 ${
+                  mode.id === 'quick-mode' ? 'text-yellow-400' :
+                  mode.available ? 'text-primary' : 'text-gray-500'
+                }`} />
               </div>
 
               <h3 className="text-lg font-semibold text-white mb-1">{mode.title}</h3>
@@ -147,7 +159,9 @@ export function DashboardPage() {
               <Link key={session.session_id} to={`/sessions/${session.session_id}`}>
                 <Card hover>
                   <div className="flex items-center gap-2 mb-2">
-                    <Badge variant="purple" size="sm">AI TUTOR</Badge>
+                    <Badge variant={session.mode === 'quick' ? 'warning' : 'purple'} size="sm">
+                      {session.mode === 'quick' ? '⚡ QUICK' : 'AI TUTOR'}
+                    </Badge>
                     <Badge 
                       variant={session.status === 'COMPLETED' ? 'success' : 'purple'} 
                       size="sm"

@@ -23,7 +23,7 @@ from app.services.session_service import SessionService, SessionStatus
 from app.services.memory import memory_service, MemoryService
 from app.graphs import invoke_generation_graph, create_initial_state
 from app.core.llm_factory import get_tutor_llm
-from app.core.prompts import TUTOR_SYSTEM_PROMPT, TUTOR_FIRST_MESSAGE_PROMPT
+from app.core.prompts import TUTOR_SYSTEM_PROMPT, TUTOR_FIRST_MESSAGE_PROMPT, QUICK_TUTOR_SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
 
@@ -284,15 +284,30 @@ class ChatService:
         memory_context = await self.memory.get_context_for_graph(str(session_id))
         
         # Build system prompt with MongoDB memory
-        system_prompt = TUTOR_SYSTEM_PROMPT.format(
-            topic=session["topic"],
-            current_day=current_day,
-            total_days=session["total_days"],
-            day_title=day_content.get("title", f"Day {current_day}"),
-            day_objectives=", ".join(day_content.get("objectives", [])),
-            current_topic=json.dumps(current_topic, indent=2) if current_topic else "Wrapping up the day",
-            memory_summary=memory_context.get("memory_summary") or "This is the start of the conversation.",
-        )
+        # Use quick tutor prompt for quick mode sessions
+        session_mode = session.get("mode", "generation")
+        session_target = session.get("target", "General understanding")
+        
+        if session_mode == "quick":
+            system_prompt = QUICK_TUTOR_SYSTEM_PROMPT.format(
+                topic=session["topic"],
+                target=session_target,
+                day_title=day_content.get("title", session["topic"]),
+                day_objectives=", ".join(day_content.get("objectives", [])),
+                current_topic=json.dumps(current_topic, indent=2) if current_topic else "Wrapping up the session",
+                memory_summary=memory_context.get("memory_summary") or "This is the start of the conversation.",
+            )
+        else:
+            system_prompt = TUTOR_SYSTEM_PROMPT.format(
+                topic=session["topic"],
+                current_day=current_day,
+                total_days=session["total_days"],
+                day_title=day_content.get("title", f"Day {current_day}"),
+                day_objectives=", ".join(day_content.get("objectives", [])),
+                current_topic=json.dumps(current_topic, indent=2) if current_topic else "Wrapping up the day",
+                memory_summary=memory_context.get("memory_summary") or "This is the start of the conversation.",
+                goal=session_target or "Master the topic thoroughly",
+            )
         
         # Build messages
         messages = [SystemMessage(content=system_prompt)]
@@ -445,6 +460,8 @@ Respond with ONLY one word: YES or NO"""
             current_topic_index=session["current_topic_index"],
             chat_history=chat_history,
             memory_summary=memory_context.get("memory_summary"),
+            mode=session.get("mode", "generation"),
+            target=session.get("target"),
         ) | {"user_message": user_message}
     
     def _convert_history_to_messages(
