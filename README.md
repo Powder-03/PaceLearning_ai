@@ -5,10 +5,12 @@ A production-ready AI microservice that provides personalized curriculum generat
 ## Features
 
 - **Dynamic Plan Generation**: Creates personalized, multi-day lesson plans based on topic, available time, and learning goals
+- **Quick Mode**: Learn any topic in a single focused session — perfect for exam prep, quick revision, or exploring a concept on the fly
 - **Interactive Tutoring**: Socratic-method teaching with understanding checks using Gemini 2.5 Flash
 - **Adaptive Streaming**: Burst mode for short responses (<100 tokens), streaming for longer explanations
 - **Buffer-Based Memory**: 10-message buffer with automatic summarization for efficient context management
 - **Progress Tracking**: Stateful learning across multiple sessions with day/topic progression
+- **Responsive UI**: Fully mobile-friendly interface with slide-in sidebar, sticky header, and touch-optimised chat
 
 ## Architecture
 
